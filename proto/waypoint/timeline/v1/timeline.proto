@@ -1,0 +1,149 @@
+syntax = "proto3";
+
+package waypoint.timeline.v1;
+
+import "google/protobuf/timestamp.proto";
+import "waypoint/applications/v1/applications.proto";
+import "waypoint/catalog/v1/catalog.proto";
+
+// TimelineService owns each application's plan: dated milestones generated
+// from the program's round deadline and requirements (catalog stream) and the
+// application's checklist and recommendations (applications stream), plus the
+// student's own custom milestones. It keeps timelines in sync by consuming
+// both event streams and publishes TimelineChanged for live UI updates.
+service TimelineService {
+  rpc GetTimeline(GetTimelineRequest) returns (Timeline);
+  rpc ListTimelines(ListTimelinesRequest) returns (ListTimelinesResponse);
+  rpc GetAgenda(GetAgendaRequest) returns (GetAgendaResponse);
+  rpc AddMilestone(AddMilestoneRequest) returns (Timeline);
+  rpc UpdateMilestone(UpdateMilestoneRequest) returns (Timeline);
+  rpc DeleteMilestone(DeleteMilestoneRequest) returns (Timeline);
+  rpc GetSyncStatus(GetSyncStatusRequest) returns (GetSyncStatusResponse);
+}
+
+enum MilestoneKind {
+  MILESTONE_KIND_UNSPECIFIED = 0;
+  MILESTONE_KIND_DOCUMENT = 1;
+  MILESTONE_KIND_TEST = 2;
+  MILESTONE_KIND_RECOMMENDATION = 3;
+  MILESTONE_KIND_SUBMISSION = 4;
+  MILESTONE_KIND_DECISION = 5;
+  MILESTONE_KIND_CUSTOM = 6;
+}
+
+enum MilestoneSource {
+  MILESTONE_SOURCE_UNSPECIFIED = 0;
+  MILESTONE_SOURCE_GENERATED = 1;
+  MILESTONE_SOURCE_CUSTOM = 2;
+}
+
+message Milestone {
+  // Generated milestones have stable ids ("gen:sop", "gen:rec:<id>") so a
+  // re-plan updates them in place; custom ones are "c:<id>".
+  string id = 1;
+  MilestoneKind kind = 2;
+  MilestoneSource source = 3;
+  string title = 4;
+  string description = 5;
+  // Civil date (YYYY-MM-DD) in the program's time zone.
+  string due_date = 6;
+  bool done = 7;
+  // Computed at read time: not done and due_date is before today in the
+  // program's time zone.
+  bool overdue = 8;
+}
+
+message Timeline {
+  string application_id = 1;
+  string student_id = 2;
+  string program_id = 3;
+  string program_name = 4;
+  string university = 5;
+  string intake = 6;
+  waypoint.catalog.v1.RoundKind round = 7;
+  // The round actually used (differs from round when that round was removed).
+  waypoint.catalog.v1.RoundKind effective_round = 8;
+  string deadline = 9;
+  string timezone = 10;
+  waypoint.applications.v1.ApplicationStatus application_status = 11;
+  repeated Milestone milestones = 12;
+  repeated string warnings = 13;
+  int64 version = 14;
+  int64 application_version = 15;
+  int64 program_version = 16;
+  google.protobuf.Timestamp updated_at = 17;
+}
+
+message GetTimelineRequest {
+  string application_id = 1;
+}
+
+message ListTimelinesRequest {}
+
+message ListTimelinesResponse {
+  repeated Timeline timelines = 1;
+}
+
+message GetAgendaRequest {
+  // Inclusive civil-date window; defaults to today .. today+30.
+  string from = 1;
+  string to = 2;
+  bool include_done = 3;
+}
+
+message AgendaItem {
+  string application_id = 1;
+  string program_name = 2;
+  string university = 3;
+  Milestone milestone = 4;
+}
+
+message GetAgendaResponse {
+  repeated AgendaItem items = 1;
+}
+
+message AddMilestoneRequest {
+  string application_id = 1;
+  string title = 2;
+  string description = 3;
+  string due_date = 4;
+}
+
+message UpdateMilestoneRequest {
+  string application_id = 1;
+  string milestone_id = 2;
+  optional bool done = 3;
+  optional string title = 4;
+  optional string due_date = 5;
+  optional string description = 6;
+}
+
+message DeleteMilestoneRequest {
+  string application_id = 1;
+  string milestone_id = 2;
+}
+
+message GetSyncStatusRequest {}
+
+message StreamStatus {
+  string stream = 1;
+  int64 cursor = 2;
+  int64 head_seq = 3;
+  bool connected = 4;
+  bool leader = 5;
+  google.protobuf.Timestamp last_event_at = 6;
+  int64 events_applied = 7;
+}
+
+message GetSyncStatusResponse {
+  repeated StreamStatus streams = 1;
+}
+
+// Event payloads (timeline stream).
+
+message TimelineChanged {
+  string application_id = 1;
+  string student_id = 2;
+  int64 version = 3;
+  bool deleted = 4;
+}

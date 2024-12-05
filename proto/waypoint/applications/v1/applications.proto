@@ -1,0 +1,287 @@
+syntax = "proto3";
+
+package waypoint.applications.v1;
+
+import "google/protobuf/timestamp.proto";
+import "waypoint/catalog/v1/catalog.proto";
+
+// The applications service owns accounts, sessions, a student's applications
+// (one per program and intake) and their recommendation letters. Changes to an
+// application or its recommendations are published as a full snapshot
+// (ApplicationUpserted) so consumers never need to call back for state.
+
+service AccountService {
+  rpc Register(RegisterRequest) returns (Account);
+  rpc Authenticate(AuthenticateRequest) returns (Account);
+  rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse);
+  rpc ResolveSession(ResolveSessionRequest) returns (ResolveSessionResponse);
+  rpc RevokeSession(RevokeSessionRequest) returns (RevokeSessionResponse);
+  rpc GetAccount(GetAccountRequest) returns (Account);
+}
+
+service ApplicationService {
+  rpc CreateApplication(CreateApplicationRequest) returns (Application);
+  rpc GetApplication(GetApplicationRequest) returns (Application);
+  rpc ListApplications(ListApplicationsRequest) returns (ListApplicationsResponse);
+  rpc UpdateApplication(UpdateApplicationRequest) returns (Application);
+  rpc DeleteApplication(DeleteApplicationRequest) returns (DeleteApplicationResponse);
+  rpc GetRecommendationPacket(GetRecommendationPacketRequest) returns (RecommendationPacket);
+}
+
+service RecommendationService {
+  // Student-facing (authenticated).
+  rpc RequestRecommendation(RequestRecommendationRequest) returns (RequestRecommendationResponse);
+  rpc ListRecommendations(ListRecommendationsRequest) returns (ListRecommendationsResponse);
+  rpc CancelRecommendation(CancelRecommendationRequest) returns (Recommendation);
+  rpc RegenerateRecommendationLink(RegenerateRecommendationLinkRequest) returns (RequestRecommendationResponse);
+  // Recommender-facing: authorized by the secret token from the invitation link.
+  rpc GetRecommendationInvite(GetRecommendationInviteRequest) returns (RecommendationInvite);
+  rpc SubmitRecommendation(SubmitRecommendationRequest) returns (RecommendationInvite);
+  rpc DeclineRecommendation(DeclineRecommendationRequest) returns (RecommendationInvite);
+}
+
+enum Role {
+  ROLE_UNSPECIFIED = 0;
+  ROLE_STUDENT = 1;
+  ROLE_COUNSELOR = 2;
+}
+
+message Account {
+  string id = 1;
+  string email = 2;
+  string display_name = 3;
+  Role role = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message RegisterRequest {
+  string email = 1;
+  string password = 2;
+  string display_name = 3;
+}
+
+message AuthenticateRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message CreateSessionRequest {
+  string account_id = 1;
+}
+
+message CreateSessionResponse {
+  // Opaque secret; only its SHA-256 is stored.
+  string token = 1;
+  google.protobuf.Timestamp expires_at = 2;
+}
+
+message ResolveSessionRequest {
+  string token = 1;
+}
+
+message ResolveSessionResponse {
+  Account account = 1;
+  google.protobuf.Timestamp expires_at = 2;
+}
+
+message RevokeSessionRequest {
+  string token = 1;
+}
+
+message RevokeSessionResponse {}
+
+message GetAccountRequest {
+  string id = 1;
+}
+
+enum ApplicationStatus {
+  APPLICATION_STATUS_UNSPECIFIED = 0;
+  APPLICATION_STATUS_PLANNING = 1;
+  APPLICATION_STATUS_IN_PROGRESS = 2;
+  APPLICATION_STATUS_SUBMITTED = 3;
+  APPLICATION_STATUS_INTERVIEW = 4;
+  APPLICATION_STATUS_ADMITTED = 5;
+  APPLICATION_STATUS_REJECTED = 6;
+  APPLICATION_STATUS_WITHDRAWN = 7;
+}
+
+message ChecklistItem {
+  waypoint.catalog.v1.DocumentType document = 1;
+  bool done = 2;
+}
+
+enum RecommendationStatus {
+  RECOMMENDATION_STATUS_UNSPECIFIED = 0;
+  RECOMMENDATION_STATUS_REQUESTED = 1;
+  RECOMMENDATION_STATUS_SUBMITTED = 2;
+  RECOMMENDATION_STATUS_DECLINED = 3;
+  RECOMMENDATION_STATUS_CANCELLED = 4;
+}
+
+message RecommendationSummary {
+  string id = 1;
+  string recommender_name = 2;
+  RecommendationStatus status = 3;
+}
+
+message Application {
+  string id = 1;
+  string student_id = 2;
+  string program_id = 3;
+  // Denormalized from the catalog at creation for list views.
+  string program_name = 4;
+  string university = 5;
+  string intake = 6;
+  waypoint.catalog.v1.RoundKind round = 7;
+  ApplicationStatus status = 8;
+  repeated ChecklistItem checklist = 9;
+  string notes = 10;
+  repeated RecommendationSummary recommendations = 11;
+  int64 version = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+  google.protobuf.Timestamp submitted_at = 15;
+}
+
+message CreateApplicationRequest {
+  string program_id = 1;
+  waypoint.catalog.v1.RoundKind round = 2;
+}
+
+message GetApplicationRequest {
+  string id = 1;
+}
+
+message ListApplicationsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListApplicationsResponse {
+  repeated Application applications = 1;
+  string next_page_token = 2;
+}
+
+message ChecklistUpdate {
+  waypoint.catalog.v1.DocumentType document = 1;
+  bool done = 2;
+}
+
+message UpdateApplicationRequest {
+  string id = 1;
+  int64 expected_version = 2;
+  optional ApplicationStatus status = 3;
+  optional waypoint.catalog.v1.RoundKind round = 4;
+  optional string notes = 5;
+  repeated ChecklistUpdate checklist = 6;
+}
+
+message DeleteApplicationRequest {
+  string id = 1;
+}
+
+message DeleteApplicationResponse {}
+
+message Recommendation {
+  string id = 1;
+  string application_id = 2;
+  string recommender_name = 3;
+  string recommender_email = 4;
+  string relationship = 5;
+  // True when the student waived the right to read the letter (FERPA-style);
+  // the letter text is then never returned to the student.
+  bool waived_access = 6;
+  RecommendationStatus status = 7;
+  // Empty unless the caller may read it.
+  string letter_text = 8;
+  // sha256 of the letter text, hex, so a withheld letter can still be verified.
+  string letter_sha256 = 9;
+  string decline_reason = 10;
+  google.protobuf.Timestamp requested_at = 11;
+  google.protobuf.Timestamp responded_at = 12;
+  google.protobuf.Timestamp link_expires_at = 13;
+}
+
+message RequestRecommendationRequest {
+  string application_id = 1;
+  string recommender_name = 2;
+  string recommender_email = 3;
+  string relationship = 4;
+  bool waived_access = 5;
+}
+
+message RequestRecommendationResponse {
+  Recommendation recommendation = 1;
+  // Raw invitation token; returned exactly once, only its hash is stored.
+  string token = 2;
+}
+
+message ListRecommendationsRequest {
+  string application_id = 1;
+}
+
+message ListRecommendationsResponse {
+  repeated Recommendation recommendations = 1;
+}
+
+message CancelRecommendationRequest {
+  string application_id = 1;
+  string recommendation_id = 2;
+}
+
+message RegenerateRecommendationLinkRequest {
+  string application_id = 1;
+  string recommendation_id = 2;
+}
+
+message RecommendationInvite {
+  string recommendation_id = 1;
+  string recommender_name = 2;
+  string student_name = 3;
+  string program_name = 4;
+  string university = 5;
+  string intake = 6;
+  // Deadline of the selected round (YYYY-MM-DD), empty if unknown.
+  string deadline = 7;
+  string timezone = 8;
+  RecommendationStatus status = 9;
+  google.protobuf.Timestamp link_expires_at = 10;
+}
+
+message GetRecommendationInviteRequest {
+  string token = 1;
+}
+
+message SubmitRecommendationRequest {
+  string token = 1;
+  string letter_text = 2;
+}
+
+message DeclineRecommendationRequest {
+  string token = 1;
+  string reason = 2;
+}
+
+message GetRecommendationPacketRequest {
+  string application_id = 1;
+}
+
+message RecommendationPacket {
+  Application application = 1;
+  Account student = 2;
+  waypoint.catalog.v1.Program program = 3;
+  repeated Recommendation recommendations = 4;
+  google.protobuf.Timestamp generated_at = 5;
+}
+
+// Event payloads (applications stream).
+
+message ApplicationUpserted {
+  Application application = 1;
+}
+
+message ApplicationDeleted {
+  string application_id = 1;
+  string student_id = 2;
+  int64 version = 3;
+}

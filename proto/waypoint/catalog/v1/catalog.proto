@@ -1,0 +1,136 @@
+syntax = "proto3";
+
+package waypoint.catalog.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// CatalogService owns universities' programs, their application rounds
+// (deadlines) and admission requirements. Counselors maintain it; students
+// browse it. Every change is published as ProgramUpserted on the catalog
+// event stream so the timeline service can re-plan affected applications.
+service CatalogService {
+  rpc GetProgram(GetProgramRequest) returns (Program);
+  rpc BatchGetPrograms(BatchGetProgramsRequest) returns (BatchGetProgramsResponse);
+  rpc ListPrograms(ListProgramsRequest) returns (ListProgramsResponse);
+  rpc ListFacets(ListFacetsRequest) returns (ListFacetsResponse);
+  rpc CreateProgram(CreateProgramRequest) returns (Program);
+  rpc UpdateProgram(UpdateProgramRequest) returns (Program);
+}
+
+enum Degree {
+  DEGREE_UNSPECIFIED = 0;
+  DEGREE_BACHELOR = 1;
+  DEGREE_MASTER = 2;
+  DEGREE_PHD = 3;
+  DEGREE_MBA = 4;
+}
+
+enum RoundKind {
+  ROUND_KIND_UNSPECIFIED = 0;
+  ROUND_KIND_PRIORITY = 1;
+  ROUND_KIND_ROUND_1 = 2;
+  ROUND_KIND_ROUND_2 = 3;
+  ROUND_KIND_ROUND_3 = 4;
+  ROUND_KIND_FINAL = 5;
+}
+
+enum DocumentType {
+  DOCUMENT_TYPE_UNSPECIFIED = 0;
+  DOCUMENT_TYPE_STATEMENT_OF_PURPOSE = 1;
+  DOCUMENT_TYPE_CV = 2;
+  DOCUMENT_TYPE_TRANSCRIPT = 3;
+  DOCUMENT_TYPE_WRITING_SAMPLE = 4;
+  DOCUMENT_TYPE_PORTFOLIO = 5;
+  DOCUMENT_TYPE_ENGLISH_SCORES = 6;
+  DOCUMENT_TYPE_GRE_SCORES = 7;
+}
+
+message Deadline {
+  RoundKind round = 1;
+  // Civil date (YYYY-MM-DD) in the program's time zone.
+  string date = 2;
+}
+
+message Requirements {
+  int32 min_toefl = 1;
+  // IELTS band score in tenths (65 = 6.5) to avoid floating point.
+  int32 min_ielts_tenths = 2;
+  bool gre_required = 3;
+  int32 recommendations_required = 4;
+  repeated DocumentType documents = 5;
+}
+
+message Program {
+  string id = 1;
+  string university = 2;
+  string name = 3;
+  Degree degree = 4;
+  string field = 5;
+  string country = 6;
+  string city = 7;
+  // IANA time zone the deadlines are expressed in, e.g. "America/New_York".
+  string timezone = 8;
+  // Intake term label, e.g. "Fall 2027".
+  string intake = 9;
+  repeated Deadline deadlines = 10;
+  Requirements requirements = 11;
+  int64 application_fee_cents = 12;
+  string currency = 13;
+  string website = 14;
+  repeated string tags = 15;
+  // Incremented on every update; used for optimistic concurrency and as the
+  // idempotency key for downstream projections.
+  int64 version = 16;
+  google.protobuf.Timestamp created_at = 17;
+  google.protobuf.Timestamp updated_at = 18;
+}
+
+message GetProgramRequest {
+  string id = 1;
+}
+
+message BatchGetProgramsRequest {
+  repeated string ids = 1;
+}
+
+message BatchGetProgramsResponse {
+  repeated Program programs = 1;
+}
+
+message ListProgramsRequest {
+  // Case-insensitive substring match on university, program name and field.
+  string query = 1;
+  string country = 2;
+  Degree degree = 3;
+  string field = 4;
+  int32 page_size = 5;
+  string page_token = 6;
+}
+
+message ListProgramsResponse {
+  repeated Program programs = 1;
+  string next_page_token = 2;
+}
+
+message ListFacetsRequest {}
+
+message ListFacetsResponse {
+  repeated string countries = 1;
+  repeated string fields = 2;
+}
+
+message CreateProgramRequest {
+  Program program = 1;
+}
+
+message UpdateProgramRequest {
+  // Replaces all mutable fields of the program with program.id.
+  Program program = 1;
+  int64 expected_version = 2;
+}
+
+// Event payloads (catalog stream).
+
+message ProgramUpserted {
+  Program program = 1;
+}

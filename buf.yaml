@@ -1,0 +1,14 @@
+version: v2
+modules:
+  - path: proto
+lint:
+  use:
+    - STANDARD
+  except:
+    # Resource-oriented (AIP-131/133/134) RPCs return the resource itself,
+    # e.g. GetProgram returns Program rather than GetProgramResponse.
+    - RPC_REQUEST_RESPONSE_UNIQUE
+    - RPC_RESPONSE_STANDARD_NAME
+breaking:
+  use:
+    - FILE
