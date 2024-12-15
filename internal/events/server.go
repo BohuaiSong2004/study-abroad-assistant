@@ -145,6 +145,12 @@ func (o *Outbox) Tail(ctx context.Context, after int64, fromTail bool, opts Serv
 			gapSince = time.Time{}
 			next = e.seq + 1
 			if e.typ == TypeNoop {
+				// Delivered as a position marker (no payload): subscribers
+				// commit past it. Dropping it would leave their cursor behind
+				// the head forever after a failed write (permanent "lag").
+				if err := onEvent(&eventsv1.Event{Stream: o.stream, Seq: e.seq, Type: TypeNoop, OccurredAt: timestamppb.New(time.UnixMilli(e.atMs))}); err != nil {
+					return err
+				}
 				continue
 			}
 			ev, err := toProto(o.stream, e)

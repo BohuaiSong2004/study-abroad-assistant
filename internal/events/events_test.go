@@ -97,6 +97,10 @@ func collect(t *testing.T, f *fixture, after int64) func(n int, timeout time.Dur
 func values(t *testing.T, evs []*eventsv1.Event) []string {
 	var out []string
 	for _, e := range evs {
+		if e.Type == TypeNoop {
+			out = append(out, fmt.Sprintf("%d:(released)", e.Seq))
+			continue
+		}
 		var v wrapperspb.StringValue
 		if err := e.Payload.UnmarshalTo(&v); err != nil {
 			t.Fatal(err)
@@ -149,8 +153,8 @@ func TestFailedTransactionTombstoneDoesNotDelaySubscribers(t *testing.T) {
 		t.Fatal(err)
 	}
 	start := time.Now()
-	got := values(t, read(2, 5*time.Second))
-	if fmt.Sprint(got) != "[1:x 3:y]" {
+	got := values(t, read(3, 5*time.Second))
+	if fmt.Sprint(got) != "[1:x 2:(released) 3:y]" {
 		t.Fatalf("got %v", got)
 	}
 	if time.Since(start) > 2*time.Second {
@@ -522,5 +526,53 @@ func TestWatermarkFoldsCompletedPrefix(t *testing.T) {
 	w.close()
 	if w.dispatch(5) {
 		t.Fatal("dispatch after close")
+	}
+}
+
+// A failed write leaves a tombstone. Subscribers get it as a position
+// marker: the consumer commits past it without calling the handler, so its
+// cursor reaches the head (no permanent "lag" after failed writes, and no
+// re-reading them after a restart).
+func TestConsumerCommitsPastTombstones(t *testing.T) {
+	f := newFixture(t, ServerOptions{})
+	ctx := context.Background()
+	if err := f.ob.Commit(ctx, []types.TransactWriteItem{putItem(f.table, "X")}, spec("x")); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 3; i++ { // e.g. re-running a seed: every create already exists
+		if err := f.ob.Commit(ctx, []types.TransactWriteItem{putItem(f.table, "X")}, spec("dup")); err == nil {
+			t.Fatal("expected a conditional failure")
+		}
+	}
+	var mu sync.Mutex
+	var applied []string
+	c := NewConsumer(ConsumerConfig{
+		Name: "tomb", Stream: "test", Client: f.client, API: f.api, Table: f.table, Log: testutil.Logger(t), Workers: 2,
+		Handler: func(_ context.Context, ev *eventsv1.Event) error {
+			mu.Lock()
+			defer mu.Unlock()
+			applied = append(applied, ev.Type)
+			return nil
+		},
+	})
+	cctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go func() { _ = c.Run(cctx) }()
+	var st Status
+	for deadline := time.Now().Add(10 * time.Second); time.Now().Before(deadline); time.Sleep(50 * time.Millisecond) {
+		if st = c.Status(); st.Cursor == 4 && st.Head == 4 {
+			break
+		}
+	}
+	if st.Cursor != 4 || st.Head != 4 {
+		t.Fatalf("cursor %d, head %d: the consumer did not commit past the tombstones", st.Cursor, st.Head)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(applied) != 1 {
+		t.Fatalf("handler saw %v; tombstones must not reach it", applied)
+	}
+	if lag := c.Status().Head - c.Status().Cursor; lag != 0 {
+		t.Fatalf("lag %d after tombstones", lag)
 	}
 }

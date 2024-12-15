@@ -40,7 +40,9 @@ func (o *Outbox) watchOnce(ctx context.Context, after *int64, opts ServerOptions
 		*after = head
 	}
 	return o.Tail(ctx, *after, false, opts, func(ev *eventsv1.Event) error {
-		fn(ev)
+		if ev.Type != TypeNoop {
+			fn(ev)
+		}
 		*after = ev.Seq
 		return nil
 	}, nil)

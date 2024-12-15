@@ -328,6 +328,10 @@ func (c *Consumer) dispatchLoop(ctx context.Context, stream eventsv1.EventStream
 			}
 			last = ev.Seq
 			c.update(func(s *Status) { s.Head = max(s.Head, ev.Seq) })
+			if ev.Type == TypeNoop {
+				wm.complete(ev.Seq) // a released sequence number: nothing to apply
+				continue
+			}
 			select {
 			case queues[partition(ev.AggregateId, len(queues))] <- ev:
 			case <-ctx.Done():

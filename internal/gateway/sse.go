@@ -16,6 +16,7 @@ import (
 
 	eventsv1 "github.com/BohuaiSong2004/study-abroad-assistant/gen/waypoint/events/v1"
 	timelinev1 "github.com/BohuaiSong2004/study-abroad-assistant/gen/waypoint/timeline/v1"
+	"github.com/BohuaiSong2004/study-abroad-assistant/internal/events"
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/platform"
 )
 
@@ -123,7 +124,7 @@ func (h *Hub) session(ctx context.Context, resync bool) (bool, error) {
 			}
 		}
 		ev := msg.GetEvent()
-		if ev == nil {
+		if ev == nil || ev.Type == events.TypeNoop {
 			continue
 		}
 		var tc timelinev1.TimelineChanged
