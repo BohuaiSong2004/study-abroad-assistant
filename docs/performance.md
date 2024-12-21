@@ -5,7 +5,8 @@ code on this hardware, not a production deployment:
 
 - 2 vCPU Intel Xeon @ 2.10 GHz, 7.8 GB RAM, Linux (a shared VM)
 - services in Docker Compose (`docker compose up --build`, internal gRPC over
-  mutual TLS), DynamoDB Local (`amazon/dynamodb-local`, in memory) in Docker,
+  mutual TLS), DynamoDB Local (`amazon/dynamodb-local`, in memory, via
+  `loadtest/docker-compose.inmemory.yml`; the default stack persists to disk) in Docker,
   k6 1.8 on the same machine
 - sections 1 and 3 to 6 re-measured on 23 November 2026 with the services as
   of commit `b175ed9` (unchanged through `8741090`); section 2 and the
@@ -37,7 +38,7 @@ replays a read mix through the gateway:
 | `GET /api/timelines` | 15% | timeline base-table `Query` |
 | `GET /api/applications` | 10% | **strongly consistent** `Query`: never cached — the control |
 
-Reproduce: `docker compose up -d --build && docker compose run --rm seed -synthetic 1000 && ./loadtest/compare-cache.sh`
+Reproduce: `export COMPOSE_FILE=docker-compose.yml:loadtest/docker-compose.inmemory.yml && docker compose up -d --build && docker compose run --rm seed -synthetic 1000 && ./loadtest/compare-cache.sh`
 
 ### Low load: 50 requests/s (open loop, far below capacity)
 
@@ -177,6 +178,7 @@ colour-contrast failure; the fixes are in the
 ## Reproducing everything
 
 ```sh
+export COMPOSE_FILE=docker-compose.yml:loadtest/docker-compose.inmemory.yml   # in-memory DynamoDB Local
 docker compose up -d --build
 docker compose run --rm seed -synthetic 1000
 ./loadtest/compare-cache.sh                                   # section 1

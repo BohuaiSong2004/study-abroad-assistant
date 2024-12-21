@@ -1,0 +1,10 @@
+# Benchmarks: run DynamoDB Local in memory, as the numbers in
+# docs/performance.md were measured (the default stack persists to a volume,
+# which is slower and keeps load-test data around).
+#   export COMPOSE_FILE=docker-compose.yml:loadtest/docker-compose.inmemory.yml
+#   docker compose up -d --build
+services:
+  dynamodb:
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+    volumes: !reset []
+    depends_on: !reset {}

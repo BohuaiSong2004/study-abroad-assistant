@@ -97,6 +97,12 @@ that seeds ~40 sample programs, and [Mailpit](https://mailpit.axllent.org),
 which catches the invitation and password-reset emails: open its inbox at
 <http://localhost:8025>.
 
+Data lives in Docker volumes and survives restarts and `docker compose down`;
+`docker compose down -v` starts from scratch. On every start the seed job
+adds missing sample programs and moves a sample whose rounds have all passed
+to the next intake, and the certs job renews internal TLS certificates before
+they expire, so a stack started again months later still works.
+
 ## Development without Docker for the services
 
 Requirements: Go 1.26+, and DynamoDB Local (Docker or the AWS jar).

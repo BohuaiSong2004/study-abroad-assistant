@@ -8,6 +8,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -50,20 +51,57 @@ func main() {
 	for i := 0; i < *synthetic; i++ {
 		programs = append(programs, syntheticProgram(i, time.Now()))
 	}
-	created, skipped := 0, 0
+	today := time.Now().UTC().Format("2006-01-02")
+	created, kept, rolled := 0, 0, 0
 	for _, p := range programs {
-		c, cancel := context.WithTimeout(ctx, 10*time.Second)
-		_, err := client.CreateProgram(c, &catalogv1.CreateProgramRequest{Program: p})
-		cancel()
-		switch status.Code(err) {
-		case codes.OK:
+		switch err := upsert(ctx, client, p, today); {
+		case err == nil:
 			created++
-		case codes.AlreadyExists:
-			skipped++
+		case errors.Is(err, errKept):
+			kept++
+		case errors.Is(err, errRolled):
+			rolled++
 		default:
-			log.Error("create program failed", "id", p.Id, "error", err)
+			log.Error("seeding program failed", "id", p.Id, "error", err)
 			os.Exit(1)
 		}
 	}
-	fmt.Printf("seed: %d programs created, %d already present\n", created, skipped)
+	fmt.Printf("seed: %d programs created, %d already present, %d rolled forward to the next intake\n", created, kept, rolled)
+}
+
+var (
+	errKept   = errors.New("kept")
+	errRolled = errors.New("rolled forward")
+)
+
+// upsert creates a sample program, or, when it exists (the stack keeps its
+// data across restarts), leaves it alone unless every round has passed: then
+// the sample is replaced with the next intake's dates, so a catalog seeded
+// months ago does not end up with nothing left to apply to. Programs a
+// counselor still has open rounds on are never touched.
+func upsert(ctx context.Context, client catalogv1.CatalogServiceClient, p *catalogv1.Program, today string) error {
+	c, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	cur, err := client.GetProgram(c, &catalogv1.GetProgramRequest{Id: p.Id})
+	switch status.Code(err) {
+	case codes.NotFound:
+		_, err := client.CreateProgram(c, &catalogv1.CreateProgramRequest{Program: p})
+		if status.Code(err) == codes.AlreadyExists {
+			return errKept // created concurrently
+		}
+		return err
+	case codes.OK:
+	default:
+		return err
+	}
+	for _, d := range cur.Deadlines {
+		if d.Date >= today {
+			return errKept
+		}
+	}
+	p.Version = cur.Version
+	if _, err := client.UpdateProgram(c, &catalogv1.UpdateProgramRequest{Program: p, ExpectedVersion: cur.Version}); err != nil {
+		return err
+	}
+	return errRolled
 }

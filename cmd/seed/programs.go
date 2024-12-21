@@ -108,18 +108,25 @@ var samples = []sample{
 	{"kauri-mph", "Kauri University", "Master of Public Health", "Public Health", "New Zealand", "Auckland", "Pacific/Auckland", master, auRounds, 90, 65, 1, false, std, 10000, "NZD", []string{"health"}},
 }
 
-// intakeYear is the next autumn intake that is still open: in January the
-// current year's intake still has rounds ahead, from February on most of
-// them have passed, so the catalog moves to the following year.
-func intakeYear(now time.Time) int {
-	if now.Month() == time.January {
-		return now.Year()
+// intakeYear is the first autumn intake for which the program still has a
+// round open today (deadlines fall from the autumn before the intake to the
+// spring of the intake year, so the month alone cannot tell).
+func intakeYear(s sample, now time.Time) int {
+	if len(s.rounds) == 0 {
+		return now.Year() + 1
 	}
-	return now.Year() + 1
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	for y := now.Year(); ; y++ {
+		for _, r := range s.rounds {
+			if !time.Date(y+r.yearOffset, r.month, r.day, 0, 0, 0, 0, time.UTC).Before(today) {
+				return y
+			}
+		}
+	}
 }
 
 func toProgram(s sample, now time.Time) *catalogv1.Program {
-	y := intakeYear(now)
+	y := intakeYear(s, now)
 	p := &catalogv1.Program{
 		Id: s.id, University: s.university, Name: s.name, Degree: s.degree, Field: s.field,
 		Country: s.country, City: s.city, Timezone: s.tz, Intake: fmt.Sprintf("Fall %d", y),

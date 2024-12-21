@@ -27,6 +27,7 @@ x-service: &service
 
 volumes:
   certs:
+  dynamodb-data:
 
 services:
   # One-shot: a throwaway CA and a certificate per service (kept across
@@ -37,11 +38,24 @@ services:
     volumes: ["certs:/certs"]
     restart: "no"
 
+  # DynamoDB Local keeps its data in the dynamodb-data volume, so data
+  # survives restarts of the database container, `docker compose down`
+  # (without -v) and reboots. `docker compose down -v` starts from scratch.
+  dynamodb-volume:
+    image: amazon/dynamodb-local:latest
+    user: root
+    entrypoint: ["sh", "-c", "chown -R 1000:1000 /home/dynamodblocal/data"]
+    volumes: ["dynamodb-data:/home/dynamodblocal/data"]
+    restart: "no"
+
   dynamodb:
     image: amazon/dynamodb-local:latest
-    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-dbPath", "/home/dynamodblocal/data"]
+    volumes: ["dynamodb-data:/home/dynamodblocal/data"]
     ports: ["8000:8000"]
     restart: unless-stopped
+    depends_on:
+      dynamodb-volume: { condition: service_completed_successfully }
 
   # Catches all outgoing email: inbox at http://localhost:8025.
   mailpit:
