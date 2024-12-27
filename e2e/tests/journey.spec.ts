@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { createProgram, registerStudent, startApplication } from "./helpers";
+import { createProgram, isoDaysFromNow, registerStudent, startApplication } from "./helpers";
 import { readFileSync } from "fs";
 
 test("a student plans an application end to end", async ({ page, browser }) => {
@@ -29,7 +29,7 @@ test("a student plans an application end to end", async ({ page, browser }) => {
   // Custom milestone.
   await page.getByText("Add your own milestone").click();
   await page.getByLabel("Title").fill("Book IELTS test");
-  await page.getByLabel("Due date").fill("2026-12-15");
+  await page.getByLabel("Due date").fill(isoDaysFromNow(20));
   await page.getByRole("button", { name: "Add milestone" }).click();
   await expect(timeline).toContainText("Book IELTS test");
 

@@ -1,0 +1,5 @@
+# Keep LF line endings on every platform: shell scripts break with CRLF
+# (core.autocrlf=true on Windows), and gofmt/golden files expect LF.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
