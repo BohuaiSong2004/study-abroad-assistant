@@ -194,3 +194,15 @@ withdrawn in a follow-up commit, re-measured after checking the served pages
 for the current markup, and the old-build runs kept only as the baseline.
 Lesson applied: verify the running build before measuring, and give
 comparison stacks their own project name.
+
+## 15. axe crashing Firefox
+
+The Firefox CI job failed with `Page crashed` in the accessibility test. It
+reproduced locally in about half the runs: Firefox's content process died
+with signal 11 while axe analysed the page. Bisecting found no single cause:
+it crashed with one axe rule or many, with any region of the page removed,
+and with every stylesheet disabled, and axe-core was already the latest
+release. The same pages driven by hand (sign in, open the editor, filter,
+wait for refreshes) never crashed Firefox in ten runs, so users are not
+affected. The audits now run on Chromium and WebKit only (the markup is the
+same for every engine); Firefox still runs every functional test.

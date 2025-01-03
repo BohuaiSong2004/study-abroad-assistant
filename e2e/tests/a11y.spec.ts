@@ -2,6 +2,13 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, Page } from "@playwright/test";
 import { counselorEmail, counselorPassword, createProgram, isoDaysFromNow, registerStudent, startApplication } from "./helpers";
 
+// axe makes Firefox's content process segfault (signal 11) on these pages in
+// about half the runs; bisecting by rule, by page region and with styles off
+// found no single trigger, and the same pages used by hand never crash
+// Firefox. The markup is the same in every engine, so the audits run on
+// Chromium and WebKit; Firefox runs every functional test.
+test.skip(({ browserName }) => browserName === "firefox", "axe crashes Firefox's content process (see above)");
+
 async function audit(page: Page, name: string) {
   await expect(page.locator("body")).toHaveAttribute("data-ready", "true");
   const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
