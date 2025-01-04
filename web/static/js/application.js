@@ -4,16 +4,21 @@ jQuery(function ($) {
 
   var id = WP.param("id");
   var app = null, tl = null, program = null;
+  var missing = false; // the application does not exist (or is not ours)
   var base = "/api/applications/" + encodeURIComponent(id || "");
 
   if (!id) { window.location.replace("/dashboard.html"); return; }
 
+  $("#export-timeline").attr("href", base + "/timeline.xml");
+  $("#export-packet").attr("href", base + "/packet.xml");
+  $.each(WP.labels.status, function (k, v) { $("#app-status").append($("<option>").val(k).text(v)); });
+  // Fetch everything in parallel with the session check: on a slow network
+  // the sequential version spent two extra round trips before showing the
+  // timeline. A 401 from any call redirects to sign-in.
+  var loaded = loadAll();
   WP.requireRole("student").then(function (account) {
     WP.renderHeader(account);
-    $("#export-timeline").attr("href", base + "/timeline.xml");
-    $("#export-packet").attr("href", base + "/packet.xml");
-    $.each(WP.labels.status, function (k, v) { $("#app-status").append($("<option>").val(k).text(v)); });
-    loadAll().then(function () { WP.ready(); });
+    loaded.always(function () { WP.ready(); });
     WP.live(function (u) {
       if (u.type === "resync" || u.applicationId === id) {
         if (u.deleted) { window.location.assign("/dashboard.html"); return; }
@@ -23,14 +28,16 @@ jQuery(function ($) {
   });
 
   function loadAll() {
+    var tlp = loadTimeline(), recp = loadRecs();
     return loadApp().then(function () {
       return $.when(
         WP.api("GET", "/api/programs/" + encodeURIComponent(app.programId)).then(function (p) { program = p; renderRounds(); }),
-        loadTimeline(),
-        loadRecs()
+        tlp, recp
       );
     }, function (err) {
       if (err.status === 404) {
+        missing = true;
+        clearTimeout(pendingRetry);
         $("#app-title").text("Application not found");
         $("main .grid-2").prop("hidden", true);
       } else {
@@ -71,6 +78,7 @@ jQuery(function ($) {
       renderTimeline();
     }, function (err) {
       if (err.status === 404) {
+        if (missing) return;
         // A brand-new application's timeline is created asynchronously by
         // the timeline service; the live stream (or this retry) picks it up.
         $("#tl-pending").prop("hidden", false);
@@ -187,7 +195,9 @@ jQuery(function ($) {
   /* ---------- recommendations ---------- */
 
   function loadRecs() {
-    return WP.api("GET", base + "/recommendations").then(function (res) { renderRecs(res.recommendations); });
+    return WP.api("GET", base + "/recommendations").then(function (res) { renderRecs(res.recommendations); }, function () {
+      // Reported by the application load (404) or the next refresh.
+    });
   }
 
   function inviteBox(rec) {

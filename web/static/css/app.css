@@ -10,7 +10,7 @@
   --primary: #0b6e65;
   --primary-strong: #08564f;
   --primary-soft: #e3f3f1;
-  --accent: #b4540a;
+  --accent: #9a4807; /* 5.3:1 on --accent-soft; #b4540a was 4.48:1 */
   --accent-soft: #fdf1e5;
   --danger: #b3261e;
   --danger-soft: #fdecea;
@@ -83,8 +83,10 @@ a:hover { color: var(--primary-strong); }
   border-bottom: 1px solid var(--border);
   position: sticky; top: 0; z-index: 10;
 }
+/* Fixed header height: the nav and user menu are filled in by script, and
+   a header that grows when they appear shifts the whole page (CLS). */
 .site-header .bar {
-  max-width: 1120px; margin: 0 auto; padding: .75rem 1.25rem;
+  max-width: 1120px; margin: 0 auto; padding: .75rem 1.25rem; min-height: 60px;
   display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
 }
 .brand {
@@ -95,11 +97,14 @@ a:hover { color: var(--primary-strong); }
 .site-nav { display: flex; gap: 1rem; flex: 1; flex-wrap: wrap; }
 .site-nav a { color: var(--muted); text-decoration: none; font-weight: 500; padding: .25rem 0; border-bottom: 2px solid transparent; }
 .site-nav a[aria-current="page"], .site-nav a:hover { color: var(--text); border-bottom-color: var(--primary); }
-.user-menu { display: flex; align-items: center; gap: .75rem; color: var(--muted); font-size: .95rem; }
+.user-menu { display: flex; align-items: center; gap: .75rem; color: var(--muted); font-size: .95rem; min-height: 32px; }
 
 main {
   flex: 1;
   width: 100%; max-width: 1120px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem;
+  /* Keep the footer below the fold while content loads, so it is not
+     pushed down (a layout shift) when the data arrives. */
+  min-height: 100vh;
 }
 
 .site-footer {
@@ -110,7 +115,8 @@ main {
 h1 { font-size: 1.75rem; line-height: 1.25; margin: 0 0 .25rem; }
 h2 { font-size: 1.2rem; margin: 0 0 .75rem; }
 h3 { font-size: 1.05rem; margin: 0 0 .25rem; }
-.subtitle { color: var(--muted); margin: 0 0 1.5rem; }
+.subtitle { color: var(--muted); margin: 0 0 1.5rem; min-height: 1.5em; }
+.reserve-progress { min-height: 8px; }
 
 .page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
 .page-head .subtitle { margin-bottom: 0; }
@@ -314,3 +320,35 @@ dialog.wide { max-width: 760px; }
 .row > .field.grow-1 { flex: 1 1 auto; }
 .row > .field.no-grow { flex: 0 0 auto; }
 .align-input { margin-top: 1.8rem; }
+
+/* Narrow screens: a two-row header whose rows exist before the script fills
+   them in (brand + account on top, navigation below), so nothing wraps and
+   shifts the page once the session is known. */
+@media (max-width: 640px) {
+  .site-header .bar {
+    display: grid; grid-template-columns: 1fr auto; grid-template-areas: "brand user" "nav nav";
+    gap: .5rem 1rem; min-height: 96px; align-items: center;
+  }
+  .brand { grid-area: brand; }
+  .user-menu { grid-area: user; }
+  .user-menu > span { display: none; } /* the name; the sign-out button stays */
+  .site-nav { grid-area: nav; min-height: 2rem; align-items: center; }
+  /* Titles filled in by script (e.g. a university name) may wrap. */
+  /* Stack the page header: in a wrapping row, a short "Loading…" title let
+     the actions sit beside it until the real title pushed them down. */
+  .page-head { flex-direction: column; align-items: flex-start; }
+  h1[data-reserve] { min-height: 2.5em; }
+  p[data-reserve] { min-height: 3em; }
+}
+
+/* Skeleton placeholders reserve roughly the space of the content that
+   replaces them (no layout shift when the data arrives). */
+.skeleton { list-style: none; }
+.skeleton .bar-line { display: block; height: .9rem; border-radius: 4px; background: var(--surface-2); margin: .35rem 0; }
+.skeleton .bar-line.short { width: 40%; }
+.milestone.skeleton { min-height: 64px; }
+.app-card.skeleton { min-height: 290px; }
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton .bar-line { animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .55; } }
+}

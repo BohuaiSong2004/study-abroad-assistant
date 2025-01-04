@@ -25,8 +25,8 @@
 <p><a href="/dashboard.html">&larr; All applications</a></p>
 <div class="page-head">
   <div>
-    <h1 id="app-title">Loading&hellip;</h1>
-    <p class="subtitle" id="app-subtitle"></p>
+    <h1 id="app-title" data-reserve>Loading&hellip;</h1>
+    <p class="subtitle" id="app-subtitle" data-reserve></p>
   </div>
   <div class="actions">
     <span class="live" id="live" data-state="off">Connecting&hellip;</span>
@@ -35,14 +35,12 @@
 <div class="grid-2">
   <div>
     <section class="card" aria-labelledby="tl-title">
-      <div class="page-head mb-05">
-        <h2 id="tl-title" class="mt-0">Timeline</h2>
-        <span class="muted small" id="tl-progress-label"></span>
-      </div>
-      <div id="tl-progress"></div>
+      <h2 id="tl-title" class="mt-0 mb-05">Timeline</h2>
+      <p class="muted small mb-05" id="tl-progress-label">&nbsp;</p>
+      <div id="tl-progress" class="reserve-progress"></div>
       <div id="warnings" class="mt-1"></div>
       <p class="muted" id="tl-pending" hidden>Planning your timeline&hellip;</p>
-      <ol class="timeline mt-1" id="timeline" aria-live="polite"></ol>
+      <ol class="timeline mt-1" id="timeline" aria-live="polite"><li class="milestone skeleton" aria-hidden="true"><span class="dot"></span><div><span class="bar-line"></span><span class="bar-line short"></span></div><div></div></li><li class="milestone skeleton" aria-hidden="true"><span class="dot"></span><div><span class="bar-line"></span><span class="bar-line short"></span></div><div></div></li><li class="milestone skeleton" aria-hidden="true"><span class="dot"></span><div><span class="bar-line"></span><span class="bar-line short"></span></div><div></div></li><li class="milestone skeleton" aria-hidden="true"><span class="dot"></span><div><span class="bar-line"></span><span class="bar-line short"></span></div><div></div></li><li class="milestone skeleton" aria-hidden="true"><span class="dot"></span><div><span class="bar-line"></span><span class="bar-line short"></span></div><div></div></li><li class="milestone skeleton" aria-hidden="true"><span class="dot"></span><div><span class="bar-line"></span><span class="bar-line short"></span></div><div></div></li><li class="milestone skeleton" aria-hidden="true"><span class="dot"></span><div><span class="bar-line"></span><span class="bar-line short"></span></div><div></div></li></ol>
       <details class="mt-1">
         <summary>Add your own milestone</summary>
         <form id="milestone-form" class="mt-075">
