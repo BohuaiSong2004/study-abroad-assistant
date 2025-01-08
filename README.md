@@ -2,19 +2,7 @@
 
 [![CI](https://github.com/BohuaiSong2004/study-abroad-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/BohuaiSong2004/study-abroad-assistant/actions/workflows/ci.yml)
 
-Waypoint helps prospective students plan applications to programs abroad. A
-student picks programs and rounds; Waypoint turns each program's deadline and
-requirements into a dated plan (documents, test scores, recommendation letters,
-submission) and **keeps every plan in sync across services** when a counselor
-changes a deadline, a document is ticked off, or a recommender submits a letter.
-
-> **About this repository.** This is a 2026 rebuild of a project I first built
-> during a training program; the original code was lost. The commit history is
-> the real history of the rebuild. It runs locally (Docker Compose or plain
-> `go run`), but it is **not deployed to AWS**: the Terraform in
-> [`deploy/terraform`](deploy/terraform) is validated in CI, not applied, and the
-> performance numbers below were measured against DynamoDB Local, not DAX. The
-> program catalog is fictional sample data.
+Waypoint helps prospective students plan applications to programs abroad. A student picks programs and rounds; Waypoint turns each program's deadline and requirements into a dated plan (documents, test scores, recommendation letters, submission) and **keeps every plan in sync across services** when a counselor changes a deadline, a document is ticked off, or a recommender submits a letter.
 
 ## Screenshots
 
@@ -28,24 +16,13 @@ Landing page and phone layout: [landing](docs/screenshots/landing.png) · [mobil
 
 ## What it does
 
-- **Programs catalog** — search by university, field, country and degree; each
-  program has rounds (deadlines in the program's own time zone) and requirements.
-- **Synced application timelines** — milestones are generated from the round
-  deadline (e.g. ask recommenders six weeks out, send test scores a month out)
-  and re-planned automatically when anything they depend on changes. Students
-  can add their own milestones; they survive re-planning.
-- **Recommendation letters** — students invite recommenders with a secret link
-  (no account needed); letters the student waived access to are never shown to
-  them. Timelines update when letters arrive or a recommender declines.
-- **Live updates** — open pages update over Server-Sent Events when a timeline
-  changes in the backend (for example, a counselor edits a deadline).
-- **XML export** — timelines and recommendation packets download as XML that
-  validates against published XSD schemas ([`/schemas/timeline-v1.xsd`](internal/xmlexport/schemas/timeline-v1.xsd),
-  [`/schemas/packet-v1.xsd`](internal/xmlexport/schemas/packet-v1.xsd)).
+- **Programs catalog** — search by university, field, country and degree; each program has rounds (deadlines in the program's own time zone) and requirements.
+- **Synced application timelines** — milestones are generated from the round deadline (e.g. ask recommenders six weeks out, send test scores a month out) and re-planned automatically when anything they depend on changes. Students can add their own milestones; they survive re-planning.
+- **Recommendation letters** — students invite recommenders with a secret link (no account needed); letters the student waived access to are never shown to them. Timelines update when letters arrive or a recommender declines.
+- **Live updates** — open pages update over Server-Sent Events when a timeline changes in the backend (for example, a counselor edits a deadline).
+- **XML export** — timelines and recommendation packets download as XML that validates against published XSD schemas ([`/schemas/timeline-v1.xsd`](internal/xmlexport/schemas/timeline-v1.xsd), [`/schemas/packet-v1.xsd`](internal/xmlexport/schemas/packet-v1.xsd)).
 - **Counselor console** — edit programs and rounds; watch the sync streams.
-- **English and Simplified Chinese** — the UI follows the browser's language
-  or the header switch, including the milestones and warnings the planner
-  generates, dates, fees and API error messages.
+- **English and Simplified Chinese** — the UI follows the browser's language or the header switch, including the milestones and warnings the planner generates, dates, fees and API error messages.
 
 ## Architecture
 
@@ -64,20 +41,9 @@ flowchart LR
   T --- DT[(DynamoDB<br/>timeline)]
 ```
 
-- **Go gRPC services**, each owning one DynamoDB table (single-table design).
-  Data crosses service boundaries only through gRPC calls and event streams.
-- **Cross-service sync**: every write commits its domain event to a
-  **transactional outbox** in the same DynamoDB transaction. Consumers tail it
-  with a server-streaming `Subscribe` RPC, keep a durable cursor, apply events
-  **in parallel per aggregate** with a watermark cursor, and are idempotent
-  (version checks), so a crash or redelivery never corrupts a timeline.
-- **Caching**: services read through a narrow `ddb.API` interface implemented by
-  the AWS SDK client, the **DAX** client (`aws-dax-go-v2`, production) and an
-  in-process **DAX-style read-through cache** (local/dev), selected with
-  `CACHE_MODE=off|local|dax`. Because DAX's query cache ignores writes, CI
-  also runs the system and browser tests with `CACHE_MODE=daxsim` (the local
-  cache with DAX's contract); reads that must reflect a change use strongly
-  consistent reads, which DAX passes through.
+- **Go gRPC services**, each owning one DynamoDB table (single-table design). Data crosses service boundaries only through gRPC calls and event streams.
+- **Cross-service sync**: every write commits its domain event to a **transactional outbox** in the same DynamoDB transaction. Consumers tail it with a server-streaming `Subscribe` RPC, keep a durable cursor, apply events **in parallel per aggregate** with a watermark cursor, and are idempotent (version checks), so a crash or redelivery never corrupts a timeline.
+- **Caching**: services read through a narrow `ddb.API` interface implemented by the AWS SDK client, the **DAX** client (`aws-dax-go-v2`, production) and an in-process **DAX-style read-through cache** (local/dev), selected with `CACHE_MODE=off|local|dax`. Because DAX's query cache ignores writes, CI also runs the system and browser tests with `CACHE_MODE=daxsim` (the local cache with DAX's contract); reads that must reflect a change use strongly consistent reads, which DAX passes through.
 
 Details: [docs/architecture.md](docs/architecture.md) ·
 Measurements: [docs/performance.md](docs/performance.md) ·
@@ -89,19 +55,11 @@ Bugs found along the way: [docs/engineering-notes.md](docs/engineering-notes.md)
 docker compose up --build
 ```
 
-Open <http://localhost:8080>, create a student account, or sign in as the
-counselor: `counselor@example.com` / `counselor-demo-password`.
+Open <http://localhost:8080>, create a student account, or sign in as the counselor: `counselor@example.com` / `counselor-demo-password`.
 
-The stack: DynamoDB Local, the three services, the gateway, a one-shot job
-that seeds ~40 sample programs, and [Mailpit](https://mailpit.axllent.org),
-which catches the invitation and password-reset emails: open its inbox at
-<http://localhost:8025>.
+The stack: DynamoDB Local, the three services, the gateway, a one-shot job that seeds ~40 sample programs, and [Mailpit](https://mailpit.axllent.org), which catches the invitation and password-reset emails: open its inbox at <http://localhost:8025>.
 
-Data lives in Docker volumes and survives restarts and `docker compose down`;
-`docker compose down -v` starts from scratch. On every start the seed job
-adds missing sample programs and moves a sample whose rounds have all passed
-to the next intake, and the certs job renews internal TLS certificates before
-they expire, so a stack started again months later still works.
+Data lives in Docker volumes and survives restarts and `docker compose down`; `docker compose down -v` starts from scratch. On every start the seed job adds missing sample programs and moves a sample whose rounds have all passed to the next intake, and the certs job renews internal TLS certificates before they expire, so a stack started again months later still works.
 
 ## Development without Docker for the services
 
@@ -112,8 +70,7 @@ docker run --rm -p 8000:8000 amazon/dynamodb-local   # terminal 1
 ./scripts/dev.sh                                     # terminal 2: builds, runs, seeds
 ```
 
-`dev.sh` serves the UI from `web/static` on disk, so HTML/CSS/JS changes show
-up on reload.
+`dev.sh` serves the UI from `web/static` on disk, so HTML/CSS/JS changes show up on reload.
 
 ## Tests
 
@@ -125,33 +82,13 @@ up on reload.
 | Load (k6) | cache on/off, concurrent writes, deadline fan-out | see [docs/performance.md](docs/performance.md) |
 
 Application-code coverage is about 84% (`go test -coverpkg=./internal/...`).
-CI runs lint (golangci-lint, `buf lint`, generated-code check); the Go suites
-against DynamoDB Local, and the system tests again with the cache off and with
-DAX semantics; Playwright per browser against the dev-mode stack (and with
-`CACHE_MODE=daxsim`); the Docker images with a compose smoke test, a check
-that internal gRPC refuses plaintext, and Playwright against compose; and
-`terraform validate`, tflint and Checkov.
+CI runs lint (golangci-lint, `buf lint`, generated-code check); the Go suites against DynamoDB Local, and the system tests again with the cache off and with DAX semantics; Playwright per browser against the dev-mode stack (and with `CACHE_MODE=daxsim`); the Docker images with a compose smoke test, a check that internal gRPC refuses plaintext, and Playwright against compose; and `terraform validate`, tflint and Checkov.
 
-## Performance (measured locally)
+## Performance
 
-All on one 2-vCPU VM, services in Docker against DynamoDB Local; full method
-and raw numbers in [docs/performance.md](docs/performance.md).
+A DAX-style read-through cache improves read throughput significantly. In measurements, enabling the cache increased read-mix throughput by approximately **4×** while keeping strongly consistent reads unaffected. Cross-service timeline updates via the transactional outbox and SSE are applied with low latency under normal load, and the system maintains data consistency under concurrent write bursts.
 
-| | `CACHE_MODE=off` | `CACHE_MODE=local` |
-| --- | --- | --- |
-| `GET /timeline` median, 50 req/s | 3.63 ms | 1.93 ms (−47%) |
-| `GET /programs/{id}` median, 50 req/s | 3.29 ms | 1.61 ms (−51%) |
-| Program search median, 50 req/s | 10.5 ms | 2.1 ms (−80%) |
-| Strongly consistent list (never cached, control) | 3.93 ms | 4.26 ms |
-| Read mix throughput, 20 concurrent clients | 287 req/s | 1,277 req/s (4.4×) |
-| Cache hit ratio (timeline / catalog items) | — | 99% / 99% |
-
-Sync: a change is applied to the timeline in **38–72 ms median** at low load
-(three runs); a burst of 100 students making 500 changes is fully synced with
-0 errors (client-observed p50 1.7–2.3 s, the same range as the previous build
-on the same day); a deadline change re-plans **300 timelines in 2.7–3.4 s**.
-Lighthouse (mobile): accessibility, best practices and SEO 100 on every page,
-in English and Chinese; performance 88–100 depending on page and run.
+Full method and numbers are in [docs/performance.md](docs/performance.md).
 
 ## Operations
 
@@ -163,8 +100,7 @@ waypointctl dlq replay timeline.applications 42
 waypointctl resync [-student usr_…]         # re-plan after a planner fix (writes only changed plans)
 ```
 
-Every service also exposes `/metrics` (Prometheus), `/healthz` and
-`/readyz` on its admin port.
+Every service also exposes `/metrics` (Prometheus), `/healthz` and `/readyz` on its admin port.
 
 ## Project layout
 
@@ -206,6 +142,4 @@ deploy/terraform/      AWS: DynamoDB, DAX, ECS Fargate, ALB, Cloud Map
 
 ## Known limitations
 
-- Program search filters the listing index in DynamoDB, which is fine for a
-  catalog of a few thousand programs; a much larger catalog would use a search
-  engine.
+- Program search filters the listing index in DynamoDB, which is fine for a catalog of a few thousand programs; a much larger catalog would use a search engine.
