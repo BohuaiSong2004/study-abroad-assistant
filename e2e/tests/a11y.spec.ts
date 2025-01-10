@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, Page } from "@playwright/test";
-import { counselorEmail, counselorPassword, createProgram, registerStudent, startApplication } from "./helpers";
+import { counselorEmail, counselorPassword, createProgram, isoDaysFromNow, registerStudent, startApplication } from "./helpers";
 
 async function audit(page: Page, name: string) {
   await expect(page.locator("body")).toHaveAttribute("data-ready", "true");
@@ -21,13 +21,16 @@ test("public pages have no serious accessibility violations", async ({ page }) =
 });
 
 test("student pages have no serious accessibility violations", async ({ page }) => {
-  const program = await createProgram();
+  // A deadline a week away renders the amber "days left" pill and overdue
+  // badges, which have their own colour contrast to check.
+  const program = await createProgram({ round1: isoDaysFromNow(7) });
   await registerStudent(page);
   await audit(page, "dashboard (empty)");
   await startApplication(page, program);
   await audit(page, "application");
   await page.goto("/dashboard.html");
   await expect(page.locator(".app-card")).toHaveCount(1);
+  await expect(page.locator(".app-card .pill.soon")).toBeVisible();
   await audit(page, "dashboard");
 });
 
