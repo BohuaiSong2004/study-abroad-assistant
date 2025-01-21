@@ -97,7 +97,7 @@ up on reload.
 | --- | --- | --- |
 | Go unit + integration | 59 test functions: planner rules, cache races, outbox gaps and tombstones, consumer resume/watermark/leases, full services over in-memory gRPC, gateway HTTP (CSRF, rate limits, SSE, XML) | `DYNAMODB_ENDPOINT=http://localhost:8000 go test -race ./...` |
 | XML schemas | Every export validated with `xmllint` against the XSDs | part of the Go tests (needs `libxml2-utils`) |
-| Browser (Playwright) | 16 end-to-end tests incl. live sync, no-JavaScript sign-in, axe accessibility, mobile layout | `cd e2e && npm ci && npx playwright test` (stack running) |
+| Browser (Playwright) | 16 end-to-end tests incl. live sync, no-JavaScript sign-in, axe accessibility, mobile layout | `cd e2e && npm ci && npx playwright install chromium && npx playwright test` (stack running) |
 | Load (k6) | cache on/off, concurrent writes, deadline fan-out | see [docs/performance.md](docs/performance.md) |
 
 Application-code coverage is about 83% (`go test -coverpkg=./internal/...`).
