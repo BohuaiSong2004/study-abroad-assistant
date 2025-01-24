@@ -246,6 +246,8 @@ message RecommendationInvite {
   string timezone = 8;
   RecommendationStatus status = 9;
   google.protobuf.Timestamp link_expires_at = 10;
+  // Whether the student waived access: tells the recommender who can read it.
+  bool waived_access = 11;
 }
 
 message GetRecommendationInviteRequest {

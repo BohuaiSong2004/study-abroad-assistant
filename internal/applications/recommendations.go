@@ -318,6 +318,7 @@ func (s *RecommendationService) invite(ctx context.Context, ref *tokenRef, r *st
 		RecommendationId: r.rec.Id, RecommenderName: r.rec.RecommenderName,
 		ProgramName: a.ProgramName, University: a.University, Intake: a.Intake,
 		Status: r.rec.Status, LinkExpiresAt: timestamppb.New(time.UnixMilli(ref.expiresMs)),
+		WaivedAccess: r.rec.WaivedAccess,
 	}
 	if acct, err := s.accounts.getAccount(ctx, ref.sid); err == nil {
 		inv.StudentName = acct.DisplayName

@@ -1859,6 +1859,8 @@ type RecommendationInvite struct {
 	Timezone      string                 `protobuf:"bytes,8,opt,name=timezone,proto3" json:"timezone,omitempty"`
 	Status        RecommendationStatus   `protobuf:"varint,9,opt,name=status,proto3,enum=waypoint.applications.v1.RecommendationStatus" json:"status,omitempty"`
 	LinkExpiresAt *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=link_expires_at,json=linkExpiresAt,proto3" json:"link_expires_at,omitempty"`
+	// Whether the student waived access: tells the recommender who can read it.
+	WaivedAccess  bool `protobuf:"varint,11,opt,name=waived_access,json=waivedAccess,proto3" json:"waived_access,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1961,6 +1963,13 @@ func (x *RecommendationInvite) GetLinkExpiresAt() *timestamppb.Timestamp {
 		return x.LinkExpiresAt
 	}
 	return nil
+}
+
+func (x *RecommendationInvite) GetWaivedAccess() bool {
+	if x != nil {
+		return x.WaivedAccess
+	}
+	return false
 }
 
 type GetRecommendationInviteRequest struct {
@@ -2465,7 +2474,7 @@ const file_waypoint_applications_v1_applications_proto_rawDesc = "" +
 	"\x11recommendation_id\x18\x02 \x01(\tR\x10recommendationId\"y\n" +
 	"#RegenerateRecommendationLinkRequest\x12%\n" +
 	"\x0eapplication_id\x18\x01 \x01(\tR\rapplicationId\x12+\n" +
-	"\x11recommendation_id\x18\x02 \x01(\tR\x10recommendationId\"\xb0\x03\n" +
+	"\x11recommendation_id\x18\x02 \x01(\tR\x10recommendationId\"\xd5\x03\n" +
 	"\x14RecommendationInvite\x12+\n" +
 	"\x11recommendation_id\x18\x01 \x01(\tR\x10recommendationId\x12)\n" +
 	"\x10recommender_name\x18\x02 \x01(\tR\x0frecommenderName\x12!\n" +
@@ -2479,7 +2488,8 @@ const file_waypoint_applications_v1_applications_proto_rawDesc = "" +
 	"\btimezone\x18\b \x01(\tR\btimezone\x12F\n" +
 	"\x06status\x18\t \x01(\x0e2..waypoint.applications.v1.RecommendationStatusR\x06status\x12B\n" +
 	"\x0flink_expires_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\rlinkExpiresAt\"6\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\rlinkExpiresAt\x12#\n" +
+	"\rwaived_access\x18\v \x01(\bR\fwaivedAccess\"6\n" +
 	"\x1eGetRecommendationInviteRequest\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\"T\n" +
 	"\x1bSubmitRecommendationRequest\x12\x14\n" +
