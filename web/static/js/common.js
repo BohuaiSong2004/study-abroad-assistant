@@ -143,6 +143,9 @@
     if (n === -1) return "yesterday";
     return n > 0 ? "in " + n + " days" : Math.abs(n) + " days ago";
   };
+  WP.timeZone = function () {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (e) { return ""; }
+  };
   WP.todayISO = function () { return new Date(WP.today()).toISOString().slice(0, 10); };
   WP.fmtTime = function (iso) {
     return iso ? new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "";

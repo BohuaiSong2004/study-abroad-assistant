@@ -93,7 +93,17 @@ func (s *Service) GetAgenda(ctx context.Context, req *timelinev1.GetAgendaReques
 	if err != nil {
 		return nil, err
 	}
-	today := civil.Today(s.now(), "UTC")
+	// The default window is relative to the student's own calendar day: in
+	// Los Angeles at 8 pm it is still "today" there, although UTC has moved
+	// on. (Overdue flags stay relative to each program's time zone, because
+	// that is where the deadline is.)
+	zone := req.GetTimeZone()
+	if zone == "" {
+		zone = "UTC"
+	} else if !civil.ValidZone(zone) {
+		return nil, status.Error(codes.InvalidArgument, "unknown time zone")
+	}
+	today := civil.Today(s.now(), zone)
 	from, to := today, today.AddDays(30)
 	if req.GetFrom() != "" {
 		if from, err = civil.Parse(req.GetFrom()); err != nil {

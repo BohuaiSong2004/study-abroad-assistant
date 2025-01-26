@@ -538,10 +538,13 @@ func (x *ListTimelinesResponse) GetTimelines() []*Timeline {
 
 type GetAgendaRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Inclusive civil-date window; defaults to today .. today+30.
-	From          string `protobuf:"bytes,1,opt,name=from,proto3" json:"from,omitempty"`
-	To            string `protobuf:"bytes,2,opt,name=to,proto3" json:"to,omitempty"`
-	IncludeDone   bool   `protobuf:"varint,3,opt,name=include_done,json=includeDone,proto3" json:"include_done,omitempty"`
+	// Inclusive civil-date window; defaults to today .. today+30, where
+	// "today" is in time_zone.
+	From        string `protobuf:"bytes,1,opt,name=from,proto3" json:"from,omitempty"`
+	To          string `protobuf:"bytes,2,opt,name=to,proto3" json:"to,omitempty"`
+	IncludeDone bool   `protobuf:"varint,3,opt,name=include_done,json=includeDone,proto3" json:"include_done,omitempty"`
+	// The student's IANA time zone (the browser's); UTC if empty.
+	TimeZone      string `protobuf:"bytes,4,opt,name=time_zone,json=timeZone,proto3" json:"time_zone,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -595,6 +598,13 @@ func (x *GetAgendaRequest) GetIncludeDone() bool {
 		return x.IncludeDone
 	}
 	return false
+}
+
+func (x *GetAgendaRequest) GetTimeZone() string {
+	if x != nil {
+		return x.TimeZone
+	}
+	return ""
 }
 
 type AgendaItem struct {
@@ -1197,11 +1207,12 @@ const file_waypoint_timeline_v1_timeline_proto_rawDesc = "" +
 	"\x0eapplication_id\x18\x01 \x01(\tR\rapplicationId\"\x16\n" +
 	"\x14ListTimelinesRequest\"U\n" +
 	"\x15ListTimelinesResponse\x12<\n" +
-	"\ttimelines\x18\x01 \x03(\v2\x1e.waypoint.timeline.v1.TimelineR\ttimelines\"Y\n" +
+	"\ttimelines\x18\x01 \x03(\v2\x1e.waypoint.timeline.v1.TimelineR\ttimelines\"v\n" +
 	"\x10GetAgendaRequest\x12\x12\n" +
 	"\x04from\x18\x01 \x01(\tR\x04from\x12\x0e\n" +
 	"\x02to\x18\x02 \x01(\tR\x02to\x12!\n" +
-	"\finclude_done\x18\x03 \x01(\bR\vincludeDone\"\xb5\x01\n" +
+	"\finclude_done\x18\x03 \x01(\bR\vincludeDone\x12\x1b\n" +
+	"\ttime_zone\x18\x04 \x01(\tR\btimeZone\"\xb5\x01\n" +
 	"\n" +
 	"AgendaItem\x12%\n" +
 	"\x0eapplication_id\x18\x01 \x01(\tR\rapplicationId\x12!\n" +

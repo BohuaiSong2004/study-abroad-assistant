@@ -277,7 +277,7 @@ func (s *Server) agenda(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	ctx, cancel := s.backend(r)
 	defer cancel()
-	res, err := s.c.Timeline.GetAgenda(ctx, &timelinev1.GetAgendaRequest{From: q.Get("from"), To: q.Get("to"), IncludeDone: q.Get("includeDone") == "true"})
+	res, err := s.c.Timeline.GetAgenda(ctx, &timelinev1.GetAgendaRequest{From: q.Get("from"), To: q.Get("to"), IncludeDone: q.Get("includeDone") == "true", TimeZone: q.Get("tz")})
 	if err != nil {
 		writeRPCError(w, r, s.log, err)
 		return

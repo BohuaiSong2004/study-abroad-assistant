@@ -85,10 +85,13 @@ message ListTimelinesResponse {
 }
 
 message GetAgendaRequest {
-  // Inclusive civil-date window; defaults to today .. today+30.
+  // Inclusive civil-date window; defaults to today .. today+30, where
+  // "today" is in time_zone.
   string from = 1;
   string to = 2;
   bool include_done = 3;
+  // The student's IANA time zone (the browser's); UTC if empty.
+  string time_zone = 4;
 }
 
 message AgendaItem {

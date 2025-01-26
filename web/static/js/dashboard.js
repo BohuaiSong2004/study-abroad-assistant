@@ -53,12 +53,10 @@ jQuery(function ($) {
   var loading = null;
   function load() {
     if (loading) return loading;
-    var from = WP.todayISO();
-    var to = new Date(WP.today() + 30 * 86400000).toISOString().slice(0, 10);
     loading = $.when(
       WP.api("GET", "/api/applications"),
       WP.api("GET", "/api/timelines"),
-      WP.api("GET", "/api/agenda?from=" + from + "&to=" + to)
+      WP.api("GET", "/api/agenda?" + $.param({ tz: WP.timeZone() }))
     ).then(function (apps, tls, agenda) {
       render(apps.applications, tls.timelines, agenda.items);
     }, function (err) {
