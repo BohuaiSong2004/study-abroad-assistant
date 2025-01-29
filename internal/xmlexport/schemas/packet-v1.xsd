@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Waypoint recommendation packet, version 1. -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="urn:waypoint:packet:v1"
+           targetNamespace="urn:waypoint:packet:v1"
+           elementFormDefault="qualified">
+
+  <xs:simpleType name="NonEmpty">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Sha256">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9a-f]{64}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Degree">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="bachelor"/>
+      <xs:enumeration value="master"/>
+      <xs:enumeration value="phd"/>
+      <xs:enumeration value="mba"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Round">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="priority"/>
+      <xs:enumeration value="round_1"/>
+      <xs:enumeration value="round_2"/>
+      <xs:enumeration value="round_3"/>
+      <xs:enumeration value="final"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Status">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="requested"/>
+      <xs:enumeration value="submitted"/>
+      <xs:enumeration value="declined"/>
+      <xs:enumeration value="cancelled"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:element name="recommendationPacket">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="applicant">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="name" type="NonEmpty"/>
+              <xs:element name="email" type="NonEmpty"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="program">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="university" type="NonEmpty"/>
+              <xs:element name="name" type="NonEmpty"/>
+              <xs:element name="intake" type="xs:string"/>
+              <xs:element name="deadline" minOccurs="0">
+                <xs:complexType>
+                  <xs:attribute name="round" type="Round" use="required"/>
+                  <xs:attribute name="date" type="xs:date" use="required"/>
+                  <xs:attribute name="timezone" type="NonEmpty" use="required"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+            <xs:attribute name="id" type="NonEmpty" use="required"/>
+            <xs:attribute name="degree" type="Degree" use="required"/>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="summary">
+          <xs:complexType>
+            <xs:attribute name="lettersRequired" type="xs:nonNegativeInteger" use="required"/>
+            <xs:attribute name="lettersSubmitted" type="xs:nonNegativeInteger" use="required"/>
+            <xs:attribute name="lettersPending" type="xs:nonNegativeInteger" use="required"/>
+            <xs:attribute name="complete" type="xs:boolean" use="required"/>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="recommendations">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="recommendation" type="Recommendation" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+          <xs:unique name="uniqueRecommendation">
+            <xs:selector xpath="*"/>
+            <xs:field xpath="@id"/>
+          </xs:unique>
+        </xs:element>
+      </xs:sequence>
+      <xs:attribute name="generatedAt" type="xs:dateTime" use="required"/>
+      <xs:attribute name="applicationId" type="NonEmpty" use="required"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="Recommendation">
+    <xs:sequence>
+      <xs:element name="recommender">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="name" type="NonEmpty"/>
+            <xs:element name="email" type="NonEmpty"/>
+            <xs:element name="relationship" type="xs:string" minOccurs="0"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="requestedAt" type="xs:dateTime"/>
+      <xs:element name="respondedAt" type="xs:dateTime" minOccurs="0"/>
+      <!-- Present once submitted. Withheld letters carry only the digest. -->
+      <xs:element name="letter" minOccurs="0">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:string">
+              <xs:attribute name="sha256" type="Sha256" use="required"/>
+              <xs:attribute name="withheld" type="xs:boolean" use="required"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="declineReason" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="id" type="NonEmpty" use="required"/>
+    <xs:attribute name="status" type="Status" use="required"/>
+    <xs:attribute name="waivedAccess" type="xs:boolean" use="required"/>
+  </xs:complexType>
+</xs:schema>

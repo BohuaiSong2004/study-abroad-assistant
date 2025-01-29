@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Waypoint application timeline export, version 1. -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="urn:waypoint:timeline:v1"
+           targetNamespace="urn:waypoint:timeline:v1"
+           elementFormDefault="qualified">
+
+  <xs:simpleType name="Date">
+    <xs:restriction base="xs:date">
+      <xs:pattern value="\d{4}-\d{2}-\d{2}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Round">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="priority"/>
+      <xs:enumeration value="round_1"/>
+      <xs:enumeration value="round_2"/>
+      <xs:enumeration value="round_3"/>
+      <xs:enumeration value="final"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ApplicationStatus">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="planning"/>
+      <xs:enumeration value="in_progress"/>
+      <xs:enumeration value="submitted"/>
+      <xs:enumeration value="interview"/>
+      <xs:enumeration value="admitted"/>
+      <xs:enumeration value="rejected"/>
+      <xs:enumeration value="withdrawn"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="MilestoneKind">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="document"/>
+      <xs:enumeration value="test"/>
+      <xs:enumeration value="recommendation"/>
+      <xs:enumeration value="submission"/>
+      <xs:enumeration value="decision"/>
+      <xs:enumeration value="custom"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="MilestoneSource">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="generated"/>
+      <xs:enumeration value="custom"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="NonEmpty">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:element name="timelines">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="timeline" type="Timeline" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="generatedAt" type="xs:dateTime" use="required"/>
+      <xs:attribute name="student" type="xs:string"/>
+      <xs:attribute name="count" type="xs:nonNegativeInteger" use="required"/>
+    </xs:complexType>
+    <xs:unique name="uniqueApplication">
+      <xs:selector xpath="*"/>
+      <xs:field xpath="@applicationId"/>
+    </xs:unique>
+  </xs:element>
+
+  <xs:complexType name="Timeline">
+    <xs:sequence>
+      <xs:element name="program">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="university" type="NonEmpty"/>
+            <xs:element name="name" type="NonEmpty"/>
+            <xs:element name="intake" type="xs:string"/>
+          </xs:sequence>
+          <xs:attribute name="id" type="NonEmpty" use="required"/>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="round">
+        <xs:complexType>
+          <xs:attribute name="selected" type="Round" use="required"/>
+          <xs:attribute name="effective" type="Round"/>
+          <xs:attribute name="deadline" type="Date"/>
+          <xs:attribute name="timezone" type="NonEmpty" use="required"/>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="warnings" minOccurs="0">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="warning" type="NonEmpty" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="milestones">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="milestone" type="Milestone" minOccurs="0" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+        <xs:unique name="uniqueMilestone">
+          <xs:selector xpath="*"/>
+          <xs:field xpath="@id"/>
+        </xs:unique>
+      </xs:element>
+    </xs:sequence>
+    <xs:attribute name="applicationId" type="NonEmpty" use="required"/>
+    <xs:attribute name="version" type="xs:positiveInteger" use="required"/>
+    <xs:attribute name="status" type="ApplicationStatus" use="required"/>
+    <xs:attribute name="updatedAt" type="xs:dateTime"/>
+  </xs:complexType>
+
+  <xs:complexType name="Milestone">
+    <xs:sequence>
+      <xs:element name="title" type="NonEmpty"/>
+      <xs:element name="description" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="id" type="NonEmpty" use="required"/>
+    <xs:attribute name="kind" type="MilestoneKind" use="required"/>
+    <xs:attribute name="source" type="MilestoneSource" use="required"/>
+    <xs:attribute name="due" type="Date" use="required"/>
+    <xs:attribute name="done" type="xs:boolean" use="required"/>
+    <xs:attribute name="overdue" type="xs:boolean" use="required"/>
+  </xs:complexType>
+</xs:schema>
