@@ -8,6 +8,7 @@ import (
 	"math/rand/v2"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -40,13 +41,35 @@ type Hub struct {
 	log    *slog.Logger
 
 	mu      sync.Mutex
-	clients map[string]map[chan update]struct{}
+	clients map[string]map[*sseClient]struct{}
 	ready   bool
+}
+
+// sseClient is one open /api/events connection.
+type sseClient struct {
+	ch chan update
+	// needResync is set when an update could not be queued because the
+	// client is not keeping up; the connection then sends "resync" so the
+	// page reloads its state instead of silently missing a change.
+	needResync atomic.Bool
+	kick       chan struct{}
+}
+
+func (c *sseClient) offer(u update) {
+	select {
+	case c.ch <- u:
+	default:
+		c.needResync.Store(true)
+		select {
+		case c.kick <- struct{}{}:
+		default:
+		}
+	}
 }
 
 // NewHub creates a hub.
 func NewHub(c eventsv1.EventStreamServiceClient, log *slog.Logger) *Hub {
-	return &Hub{client: c, log: log, clients: map[string]map[chan update]struct{}{}}
+	return &Hub{client: c, log: log, clients: map[string]map[*sseClient]struct{}{}}
 }
 
 // Run subscribes until ctx is cancelled, reconnecting with backoff.
@@ -111,22 +134,22 @@ func (h *Hub) session(ctx context.Context, resync bool) (bool, error) {
 	}
 }
 
-func (h *Hub) subscribe(student string) chan update {
-	ch := make(chan update, 32)
+func (h *Hub) subscribe(student string) *sseClient {
+	c := &sseClient{ch: make(chan update, 32), kick: make(chan struct{}, 1)}
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.clients[student] == nil {
-		h.clients[student] = map[chan update]struct{}{}
+		h.clients[student] = map[*sseClient]struct{}{}
 	}
-	h.clients[student][ch] = struct{}{}
+	h.clients[student][c] = struct{}{}
 	sseClients.Inc()
-	return ch
+	return c
 }
 
-func (h *Hub) unsubscribe(student string, ch chan update) {
+func (h *Hub) unsubscribe(student string, c *sseClient) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	delete(h.clients[student], ch)
+	delete(h.clients[student], c)
 	if len(h.clients[student]) == 0 {
 		delete(h.clients, student)
 	}
@@ -136,11 +159,8 @@ func (h *Hub) unsubscribe(student string, ch chan update) {
 func (h *Hub) publish(student string, u update) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	for ch := range h.clients[student] {
-		select {
-		case ch <- u:
-		default: // slow client: it will get a resync on reconnect
-		}
+	for c := range h.clients[student] {
+		c.offer(u)
 	}
 }
 
@@ -148,11 +168,8 @@ func (h *Hub) broadcast(u update) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	for _, set := range h.clients {
-		for ch := range set {
-			select {
-			case ch <- u:
-			default:
-			}
+		for c := range set {
+			c.offer(u)
 		}
 	}
 }
@@ -164,8 +181,8 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Accel-Buffering", "no")
-	ch := s.hub.subscribe(p.UserID)
-	defer s.hub.unsubscribe(p.UserID, ch)
+	c := s.hub.subscribe(p.UserID)
+	defer s.hub.unsubscribe(p.UserID, c)
 	// Tell the browser how long to wait before reconnecting.
 	if _, err := fmt.Fprint(w, "retry: 3000\n: connected\n\n"); err != nil {
 		return
@@ -181,7 +198,13 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 			if _, err := fmt.Fprint(w, ": keep-alive\n\n"); err != nil {
 				return
 			}
-		case u := <-ch:
+		case <-c.kick:
+			if c.needResync.Swap(false) {
+				if _, err := fmt.Fprint(w, "event: resync\ndata: {\"type\":\"resync\"}\n\n"); err != nil {
+					return
+				}
+			}
+		case u := <-c.ch:
 			b, _ := json.Marshal(u)
 			if _, err := fmt.Fprintf(w, "event: %s\ndata: %s\n\n", u.Type, b); err != nil {
 				return
