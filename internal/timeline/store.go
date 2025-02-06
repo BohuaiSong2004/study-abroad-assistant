@@ -167,9 +167,12 @@ func (s *Store) Delete(ctx context.Context, sid, aid string, appVersion int64) (
 	return err == nil, err
 }
 
-// Program returns the projected program, or nil.
+// Program returns the projected program, or nil. It is read with strong
+// consistency: only event handlers (writers) use it, and a cached copy could
+// be minutes old after the consumer lease moves to another replica, which
+// would re-plan timelines with a superseded program.
 func (s *Store) Program(ctx context.Context, pid string) (*catalogv1.Program, error) {
-	out, err := s.api.GetItem(ctx, &dynamodb.GetItemInput{TableName: aws.String(s.table), Key: progKey(pid)})
+	out, err := s.api.GetItem(ctx, &dynamodb.GetItemInput{TableName: aws.String(s.table), Key: progKey(pid), ConsistentRead: aws.Bool(true)})
 	if err != nil || out.Item == nil {
 		return nil, err
 	}
