@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard · Waypoint</title>
+<meta name="description" content="Your applications, upcoming deadlines and progress.">
+<meta name="theme-color" content="#0b6e65">
+<link rel="icon" href="/img/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/app.css">
+<script defer src="/vendor/jquery-3.7.1.min.js"></script>
+<script defer src="/js/common.js"></script>
+<script defer src="/js/dashboard.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="bar">
+    <a class="brand" href="/"><img src="/img/logo.svg" alt="" width="28" height="28"> Waypoint</a>
+    <nav id="site-nav" class="site-nav" aria-label="Main"></nav>
+    <div id="user-menu" class="user-menu"></div>
+  </div>
+</header>
+<main id="main">
+<div class="page-head">
+  <div>
+    <h1>Your applications</h1>
+    <p class="subtitle" id="greeting">Loading&hellip;</p>
+  </div>
+  <div class="actions">
+    <span class="live" id="live" data-state="off">Connecting&hellip;</span>
+    <a class="btn secondary" href="/api/timelines.xml" download id="export-all">Export all timelines (XML)</a>
+    <a class="btn" href="/programs.html">Add a program</a>
+  </div>
+</div>
+<div class="grid-2">
+  <section aria-labelledby="apps-title">
+    <h2 id="apps-title" class="visually-hidden">Applications</h2>
+    <ul class="app-grid" id="apps" aria-busy="true"></ul>
+    <div class="card empty" id="apps-empty" hidden>
+      <h3>No applications yet</h3>
+      <p>Find a program and start an application &mdash; Waypoint builds the plan for you.</p>
+      <a class="btn" href="/programs.html">Browse programs</a>
+    </div>
+  </section>
+  <aside class="card" aria-labelledby="agenda-title">
+    <h2 id="agenda-title">Next 30 days</h2>
+    <ol class="agenda" id="agenda"></ol>
+    <p class="muted small" id="agenda-empty" hidden>Nothing due in the next 30 days.</p>
+  </aside>
+</div>
+</main>
+<footer class="site-footer">
+  Waypoint is a portfolio project. The program catalog is sample data &mdash; always confirm deadlines on each program's official website.
+</footer>
+<div id="toasts" aria-live="polite"></div>
+</body>
+</html>

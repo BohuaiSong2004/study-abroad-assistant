@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recommendation request · Waypoint</title>
+<meta name="description" content="Submit a recommendation letter for a student.">
+<meta name="theme-color" content="#0b6e65">
+<link rel="icon" href="/img/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/app.css">
+<script defer src="/vendor/jquery-3.7.1.min.js"></script>
+<script defer src="/js/common.js"></script>
+<script defer src="/js/recommend.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="bar">
+    <a class="brand" href="/"><img src="/img/logo.svg" alt="" width="28" height="28"> Waypoint</a>
+    <nav id="site-nav" class="site-nav" aria-label="Main"></nav>
+    <div id="user-menu" class="user-menu"></div>
+  </div>
+</header>
+<main id="main">
+<div class="narrow">
+  <h1>Recommendation request</h1>
+  <p class="form-error" role="alert" id="invite-error"></p>
+  <div id="invite" hidden>
+    <div class="card">
+      <p id="invite-intro"></p>
+      <p class="muted small" id="invite-privacy"></p>
+      <p class="muted small" id="invite-expiry"></p>
+    </div>
+    <div class="card" id="respond">
+      <form id="letter-form">
+        <h2>Your letter</h2>
+        <p class="form-error" role="alert" id="letter-error"></p>
+        <div class="field">
+          <label for="letter">Letter text</label>
+          <textarea id="letter" rows="14" minlength="50" maxlength="20000" required aria-describedby="letter-count"></textarea>
+          <p class="hint" id="letter-count">0 / 20,000 characters (minimum 50)</p>
+        </div>
+        <button class="btn" type="submit" data-requires-js disabled>Submit letter</button>
+      </form>
+      <details class="mt-1">
+        <summary>I can't write this letter</summary>
+        <form id="decline-form" class="mt-075">
+          <div class="field">
+            <label for="decline-reason">Reason (optional, shown to the student)</label>
+            <input id="decline-reason" type="text" maxlength="500">
+          </div>
+          <button class="btn secondary" type="submit" data-requires-js disabled>Decline request</button>
+        </form>
+      </details>
+    </div>
+    <div class="card" id="done" hidden>
+      <h2 id="done-title">Thank you</h2>
+      <p id="done-text"></p>
+    </div>
+  </div>
+</div>
+</main>
+<footer class="site-footer">
+  Waypoint is a portfolio project. The program catalog is sample data &mdash; always confirm deadlines on each program's official website.
+</footer>
+<div id="toasts" aria-live="polite"></div>
+</body>
+</html>

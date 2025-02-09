@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Programs · Waypoint</title>
+<meta name="description" content="Search graduate and undergraduate programs, their deadlines and requirements.">
+<meta name="theme-color" content="#0b6e65">
+<link rel="icon" href="/img/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/app.css">
+<script defer src="/vendor/jquery-3.7.1.min.js"></script>
+<script defer src="/js/common.js"></script>
+<script defer src="/js/programs.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="bar">
+    <a class="brand" href="/"><img src="/img/logo.svg" alt="" width="28" height="28"> Waypoint</a>
+    <nav id="site-nav" class="site-nav" aria-label="Main"></nav>
+    <div id="user-menu" class="user-menu"></div>
+  </div>
+</header>
+<main id="main">
+<div class="page-head">
+  <div>
+    <h1>Programs</h1>
+    <p class="subtitle">Search the catalog and start tracking an application.</p>
+  </div>
+</div>
+<form class="card" id="search-form" role="search" method="get" action="/programs.html">
+  <div class="row">
+    <div class="field grow-2">
+      <label for="q">Search</label>
+      <input id="q" name="q" type="search" placeholder="University, program or field" maxlength="100">
+    </div>
+    <div class="field">
+      <label for="country">Country</label>
+      <select id="country" name="country"><option value="">Any</option></select>
+    </div>
+    <div class="field">
+      <label for="degree">Degree</label>
+      <select id="degree" name="degree">
+        <option value="">Any</option><option value="bachelor">Bachelor's</option><option value="master">Master's</option><option value="phd">PhD</option><option value="mba">MBA</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="field">Field</label>
+      <select id="field" name="field"><option value="">Any</option></select>
+    </div>
+    <div class="field no-grow">
+      <button class="btn" type="submit">Search</button>
+    </div>
+  </div>
+</form>
+<p class="muted small" id="result-count" aria-live="polite"></p>
+<ul class="results" id="results" aria-busy="true"></ul>
+<div class="actions center mt-1">
+  <button class="btn secondary" type="button" id="more" hidden>Load more</button>
+</div>
+<dialog id="apply-dialog" aria-labelledby="apply-title">
+  <form id="apply-form" method="dialog">
+    <h2 id="apply-title">Start application</h2>
+    <p class="muted" id="apply-program"></p>
+    <p class="form-error" role="alert" id="apply-error"></p>
+    <fieldset>
+      <legend>Which round will you apply in?</legend>
+      <div class="radio-list" id="apply-rounds"></div>
+    </fieldset>
+    <div class="actions">
+      <button class="btn" type="submit" id="apply-submit">Start application</button>
+      <button class="btn secondary" type="button" id="apply-cancel">Cancel</button>
+    </div>
+  </form>
+</dialog>
+</main>
+<footer class="site-footer">
+  Waypoint is a portfolio project. The program catalog is sample data &mdash; always confirm deadlines on each program's official website.
+</footer>
+<div id="toasts" aria-live="polite"></div>
+</body>
+</html>
