@@ -498,3 +498,10 @@ func uitoa(n uint64) string {
 func detach(ctx context.Context) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 }
+
+// Invalidate drops cached state for an item written elsewhere (another
+// replica), exactly as if the write had gone through this client. index
+// reports whether the write may have changed a secondary index.
+func (c *CachedAPI) Invalidate(table string, key map[string]types.AttributeValue, index bool) {
+	c.invalidate(table, key, index)
+}

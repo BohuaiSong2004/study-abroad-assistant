@@ -21,5 +21,5 @@ func main() {
 	ob := events.NewOutbox(b.DB.API, table, "catalog", b.Log)
 	catalogv1.RegisterCatalogServiceServer(b.GRPC, catalog.NewService(catalog.NewStore(b.DB.API, table, ob), b.Log))
 	eventsv1.RegisterEventStreamServiceServer(b.GRPC, events.NewServer(ob, b.Log, events.ServerOptions{}))
-	b.Serve(ddb.TableCatalog)
+	b.Serve(ddb.TableCatalog, b.CacheWatcher(ob, catalog.InvalidateOn))
 }

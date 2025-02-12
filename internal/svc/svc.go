@@ -9,7 +9,9 @@ import (
 	"os"
 	"time"
 
+	eventsv1 "github.com/BohuaiSong2004/study-abroad-assistant/gen/waypoint/events/v1"
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/ddb"
+	"github.com/BohuaiSong2004/study-abroad-assistant/internal/events"
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/platform"
 )
 
@@ -91,6 +93,17 @@ func (b *Base) Serve(table string, workers ...func(context.Context) error) {
 		func(ctx context.Context) error { return platform.ServeHTTP(ctx, b.Log, admin) },
 	}
 	platform.Run(b.Log, append(fns, workers...)...)
+}
+
+// CacheWatcher returns a background worker that keeps this replica's local
+// cache coherent with writes made by other replicas, or nil when the local
+// cache is not in use (CACHE_MODE=off, or dax: the DAX cluster is shared).
+func (b *Base) CacheWatcher(ob *events.Outbox, invalidate func(*ddb.CachedAPI, string) func(*eventsv1.Event)) func(context.Context) error {
+	if b.DB.Local == nil {
+		return func(ctx context.Context) error { <-ctx.Done(); return nil }
+	}
+	fn := invalidate(b.DB.Local, ob.Table())
+	return func(ctx context.Context) error { return ob.Watch(ctx, events.ServerOptions{}, fn) }
 }
 
 // retry retries fn while DynamoDB is starting up (compose start order).

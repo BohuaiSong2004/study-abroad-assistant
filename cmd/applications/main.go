@@ -46,5 +46,5 @@ func main() {
 		}
 		b.Log.Info("counselor account ready", "email", email)
 	}
-	b.Serve(ddb.TableApplications)
+	b.Serve(ddb.TableApplications, b.CacheWatcher(ob, applications.InvalidateOn))
 }

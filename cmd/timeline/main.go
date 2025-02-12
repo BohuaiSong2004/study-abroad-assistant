@@ -52,5 +52,6 @@ func main() {
 	b.Serve(ddb.TableTimeline,
 		func(ctx context.Context) error { <-ctx.Done(); syncer.Close(); return nil },
 		run(fromCatalog), run(fromApps),
+		b.CacheWatcher(ob, timeline.InvalidateOn),
 	)
 }
