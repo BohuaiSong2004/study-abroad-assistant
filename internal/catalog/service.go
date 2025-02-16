@@ -273,7 +273,7 @@ func Normalize(p *catalogv1.Program) error {
 	}
 	sort.Slice(uniq, func(i, j int) bool { return uniq[i] < uniq[j] })
 	r.Documents = uniq
-	if p.ApplicationFeeCents < 0 || p.ApplicationFeeCents > 10_000_00 {
+	if p.ApplicationFeeCents < 0 || p.ApplicationFeeCents > 1_000_000_00 { // hundredths of the currency unit
 		return errors.New("application fee is out of range")
 	}
 	p.Currency = strings.ToUpper(strings.TrimSpace(p.Currency))
