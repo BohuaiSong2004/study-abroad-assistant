@@ -140,9 +140,15 @@ created); sessions and invitation tokens are always read consistently (logout
 and link revocation must be immediate); program and timeline reads, catalog
 search and agenda queries go through the cache.
 
+With several replicas each has its own cache, so each replica also tails its
+own service's outbox (`Outbox.Watch`) and drops the keys every event changed.
+Writes from other replicas are visible within one outbox poll interval
+(250 ms) instead of the item TTL. Event handlers read the program projection
+with strong consistency, so a replica that has just taken over the consumer
+lease never re-plans with a cached, older program.
+
 In production (`CACHE_MODE=dax`) the DAX cluster is a shared, write-through
-cache, so several replicas stay coherent. The in-process cache is coherent per
-process; across replicas its staleness is bounded by the TTLs.
+item cache; the watcher is not started.
 
 ## Gateway security
 

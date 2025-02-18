@@ -117,3 +117,19 @@ to 0.65, and failed colour contrast.
 Re-running the browser tests against the same database failed because test
 universities were named after the last six characters of a generated id,
 which repeated across runs. Names now use the full id.
+
+## 9. Stale reads across replicas
+
+Found by review while preparing a multi-replica setup, not in a test run. The
+in-process cache was only invalidated by the replica's own writes. With two
+timeline replicas, the one not holding the consumer lease never sees the
+re-plans the other writes, so a student could be shown a superseded deadline
+until the five-minute item TTL. Worse, after a lease hand-over the new holder
+read the program projection through its own cache and could re-plan with a
+program snapshot minutes old.
+
+Fix: each replica tails its own service's outbox (`Outbox.Watch`, the same loop
+that serves `Subscribe`) and drops the keys each event changed; event handlers
+read the program projection with a strongly consistent read. A test runs three
+cache instances over one table: the watching replica sees another's write
+within a poll interval, a control without the watcher stays stale.

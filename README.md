@@ -159,9 +159,6 @@ deploy/terraform/      AWS: DynamoDB, DAX, ECS Fargate, ALB, Cloud Map
 
 - Recommendation invitations are not emailed: the student copies the link or
   opens a prepared `mailto:`.
-- The in-process cache is coherent within one process; with several replicas
-  per service, cross-replica staleness is bounded by the TTLs. Multi-replica
-  deployments use DAX (shared cache, write-through), as in the Terraform.
 - Program search filters the listing index in DynamoDB, which is fine for a
   catalog of a few thousand programs; a much larger catalog would use a search
   engine.
