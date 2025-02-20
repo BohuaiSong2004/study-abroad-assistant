@@ -230,3 +230,79 @@ func TestSingleflightCollapsesConcurrentMisses(t *testing.T) {
 		t.Fatalf("expected concurrent misses to share one read, got %d", n)
 	}
 }
+
+func TestBatchWriteInvalidatesAndConditionHelpers(t *testing.T) {
+	c, cnt, table := setup(t)
+	ctx := context.Background()
+	put(t, c, table, "bw", "1")
+	get(t, c, table, "bw")
+	item := ddb.Key("bw", "META")
+	item["v"] = ddb.S("2")
+	if _, err := c.BatchWriteItem(ctx, &dynamodb.BatchWriteItemInput{RequestItems: map[string][]types.WriteRequest{
+		table: {{PutRequest: &types.PutRequest{Item: item}}},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	if v := get(t, c, table, "bw"); v != "2" {
+		t.Fatalf("batch write not invalidated: %s", v)
+	}
+	if _, err := c.BatchWriteItem(ctx, &dynamodb.BatchWriteItemInput{RequestItems: map[string][]types.WriteRequest{
+		table: {{DeleteRequest: &types.DeleteRequest{Key: ddb.Key("bw", "META")}}},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	if v := get(t, c, table, "bw"); v != "<none>" {
+		t.Fatalf("batch delete not invalidated: %s", v)
+	}
+	_ = cnt
+	if c.ItemStats().Hits+c.ItemStats().Misses == 0 {
+		t.Fatal("no stats")
+	}
+	c.Purge()
+
+	// A transaction whose second item fails reports index 1.
+	_, err := c.TransactWriteItems(ctx, &dynamodb.TransactWriteItemsInput{TransactItems: []types.TransactWriteItem{
+		{Put: &types.Put{TableName: aws.String(table), Item: ddb.Key("t1", "META")}},
+		{ConditionCheck: &types.ConditionCheck{TableName: aws.String(table), Key: ddb.Key("t2", "META"), ConditionExpression: aws.String("attribute_exists(pk)")}},
+	}})
+	if !ddb.IsConditionFailed(err) || ddb.CancellationIndex(err) != 1 || ddb.IsRetryableConflict(err) {
+		t.Fatalf("helpers: %v idx=%d", err, ddb.CancellationIndex(err))
+	}
+	if ddb.CancellationIndex(nil) != -1 || ddb.IsConditionFailed(nil) {
+		t.Fatal("nil error")
+	}
+	if ddb.GetS(map[string]types.AttributeValue{"x": ddb.N(1)}, "x") != "" || ddb.GetN(map[string]types.AttributeValue{"x": ddb.BOOL(true)}, "x") != 0 {
+		t.Fatal("type-mismatched getters must return zero values")
+	}
+	if ddb.Pad(42) != "0000000000000000042" {
+		t.Fatal("pad")
+	}
+	if err := ddb.Ping(ctx, cnt.API.(*dynamodb.Client), table); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestConnectModes(t *testing.T) {
+	ep := testutil.Endpoint(t)
+	ctx := context.Background()
+	for _, mode := range []string{ddb.CacheOff, ddb.CacheLocal} {
+		c, err := ddb.Connect(ctx, ddb.Config{Endpoint: ep, Region: "us-east-1", CacheMode: mode})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if (mode == ddb.CacheLocal) != (c.Local != nil) {
+			t.Fatalf("mode %s: local cache %v", mode, c.Local)
+		}
+	}
+	if _, err := ddb.Connect(ctx, ddb.Config{Endpoint: ep, CacheMode: ddb.CacheDAX}); err == nil {
+		t.Fatal("dax without endpoint accepted")
+	}
+	if _, err := ddb.Connect(ctx, ddb.Config{Endpoint: ep, CacheMode: "bogus"}); err == nil {
+		t.Fatal("unknown mode accepted")
+	}
+	t.Setenv("CACHE_MODE", "off")
+	t.Setenv("CACHE_ITEM_TTL", "30s")
+	if cfg := ddb.ConfigFromEnv(); cfg.CacheMode != "off" || cfg.ItemTTL != 30*time.Second {
+		t.Fatalf("env config %+v", cfg)
+	}
+}

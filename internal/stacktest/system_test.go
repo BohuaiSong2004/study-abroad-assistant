@@ -449,3 +449,41 @@ func TestCatalogListingFiltersAndPagination(t *testing.T) {
 	}
 	_ = types.ReturnValueNone
 }
+
+func TestBatchGetProgramsAndGetAccount(t *testing.T) {
+	s := New(t, ddb.CacheLocal)
+	for _, id := range []string{"bg-1", "bg-2"} {
+		if _, err := s.Catalog.CreateProgram(Counselor(), &catalogv1.CreateProgramRequest{Program: Program(id)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	res, err := s.Catalog.BatchGetPrograms(context.Background(), &catalogv1.BatchGetProgramsRequest{Ids: []string{"bg-1", "bg-2", "bg-1", "missing"}})
+	if err != nil || len(res.Programs) != 2 {
+		t.Fatalf("batch get: %v %v", res, err)
+	}
+	// Second call is served from the item cache and returns the same.
+	res, _ = s.Catalog.BatchGetPrograms(context.Background(), &catalogv1.BatchGetProgramsRequest{Ids: []string{"bg-2", "bg-1"}})
+	if len(res.Programs) != 2 {
+		t.Fatal("cached batch get")
+	}
+	too := make([]string, 201)
+	if _, err := s.Catalog.BatchGetPrograms(context.Background(), &catalogv1.BatchGetProgramsRequest{Ids: too}); code(err) != codes.InvalidArgument {
+		t.Fatalf("oversized batch: %v", err)
+	}
+	if _, err := s.Catalog.GetProgram(context.Background(), &catalogv1.GetProgramRequest{}); code(err) != codes.InvalidArgument {
+		t.Fatal("empty id")
+	}
+
+	me, acct := s.Student("acct@example.com", "Acct")
+	got, err := s.Accounts.GetAccount(me, &appsv1.GetAccountRequest{Id: acct.Id})
+	if err != nil || got.Email != "acct@example.com" {
+		t.Fatalf("self: %v %v", got, err)
+	}
+	other, _ := s.Student("other2@example.com", "Other")
+	if _, err := s.Accounts.GetAccount(other, &appsv1.GetAccountRequest{Id: acct.Id}); code(err) != codes.PermissionDenied {
+		t.Fatalf("other account: %v", err)
+	}
+	if _, err := s.Accounts.GetAccount(platform.ServiceContext(context.Background(), "x"), &appsv1.GetAccountRequest{Id: "usr_missing"}); code(err) != codes.NotFound {
+		t.Fatalf("missing: %v", err)
+	}
+}
