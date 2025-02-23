@@ -374,3 +374,45 @@ func TestQueryInvalidationIsScoped(t *testing.T) {
 	put(t, c, table, "indexed", "v")
 	testutil.Eventually(t, 3*time.Second, func() bool { return byIndex() == 1 }, "indexed write not visible")
 }
+
+// CacheDAXSim reproduces DAX's contract: a write updates the item cache but
+// cached query results stay until their TTL, and consistent reads pass
+// through.
+func TestDAXSemanticsLeaveQueriesToTheTTL(t *testing.T) {
+	c0, prefix := testutil.Tables(t, ddb.CacheOff)
+	table := prefix + ddb.TableCatalog
+	c := ddb.NewCachedAPI(c0.Raw, ddb.CacheOptions{ItemTTL: time.Minute, QueryTTL: 300 * time.Millisecond, DAXSemantics: true})
+	if !c.Shared() {
+		t.Fatal("DAX semantics should report a shared cache")
+	}
+	ctx := context.Background()
+	partition := func(consistent bool) string {
+		out, err := c.Query(ctx, &dynamodb.QueryInput{
+			TableName: aws.String(table), KeyConditionExpression: aws.String("pk = :pk"),
+			ExpressionAttributeValues: map[string]types.AttributeValue{":pk": ddb.S("A")},
+			ConsistentRead:            aws.Bool(consistent),
+		})
+		if err != nil || len(out.Items) != 1 {
+			t.Fatalf("query: %v %v", out, err)
+		}
+		return ddb.GetS(out.Items[0], "v")
+	}
+	put(t, c, table, "A", "1")
+	if get(t, c, table, "A") != "1" || partition(false) != "1" {
+		t.Fatal("initial reads")
+	}
+	put(t, c, table, "A", "2")
+	if got := get(t, c, table, "A"); got != "2" {
+		t.Fatalf("item cache is write-through under DAX semantics; got %s", got)
+	}
+	if got := partition(false); got != "1" {
+		t.Fatalf("query cache must ignore writes under DAX semantics; got %s", got)
+	}
+	if got := partition(true); got != "2" {
+		t.Fatalf("consistent query must bypass the cache; got %s", got)
+	}
+	time.Sleep(350 * time.Millisecond)
+	if got := partition(false); got != "2" {
+		t.Fatalf("query cache entry outlived its TTL; got %s", got)
+	}
+}

@@ -19,6 +19,12 @@ const (
 	CacheOff   = "off"   // every read goes to DynamoDB
 	CacheLocal = "local" // in-process DAX-style item + query cache
 	CacheDAX   = "dax"   // Amazon DAX cluster (production)
+	// CacheDAXSim is the local cache with DAX's consistency contract instead
+	// of the stricter local one: writes update the item cache but never
+	// invalidate cached queries, which expire only by TTL. The system and
+	// browser tests run under it so the code is verified against what DAX
+	// actually guarantees without an AWS account.
+	CacheDAXSim = "daxsim"
 )
 
 // Config selects the DynamoDB endpoint and caching strategy.
@@ -80,10 +86,11 @@ func Connect(ctx context.Context, cfg Config) (*Clients, error) {
 	c := &Clients{API: raw, Raw: raw}
 	switch cfg.CacheMode {
 	case CacheOff, "":
-	case CacheLocal:
+	case CacheLocal, CacheDAXSim:
 		c.Local = NewCachedAPI(raw, CacheOptions{
 			ItemTTL: cfg.ItemTTL, QueryTTL: cfg.QueryTTL, NegativeTTL: cfg.NegativeTTL,
 			ItemCapacity: cfg.ItemCapacity, QueryCapacity: cfg.QueryCapacity,
+			DAXSemantics: cfg.CacheMode == CacheDAXSim,
 		})
 		c.API = c.Local
 	case CacheDAX:
@@ -96,7 +103,7 @@ func Connect(ctx context.Context, cfg Config) (*Clients, error) {
 		}
 		c.API = d
 	default:
-		return nil, fmt.Errorf("unknown CACHE_MODE %q (want off, local or dax)", cfg.CacheMode)
+		return nil, fmt.Errorf("unknown CACHE_MODE %q (want off, local, daxsim or dax)", cfg.CacheMode)
 	}
 	return c, nil
 }

@@ -35,6 +35,8 @@ type CacheOptions struct {
 	NegativeTTL   time.Duration
 	ItemCapacity  int
 	QueryCapacity int
+	// DAXSemantics drops the query invalidation on writes (see CacheDAXSim).
+	DAXSemantics bool
 }
 
 // CachedAPI is a read-through, write-invalidate cache in front of DynamoDB,
@@ -66,7 +68,11 @@ type CacheOptions struct {
 // seconds to an unrelated item) emptied every cached query in that table
 // and the query hit rate was ~50%.
 //
-// Across processes, staleness is bounded by the TTLs (same contract as DAX).
+// That is stricter than DAX, whose query cache ignores writes; CacheDAXSim
+// (DAXSemantics) switches to DAX's contract so tests can check that no
+// correctness-relevant read depends on query invalidation. Across replicas,
+// each process also tails its service's outbox and calls Invalidate for the
+// keys every event changed.
 type CachedAPI struct {
 	next    API
 	opts    CacheOptions
@@ -113,6 +119,10 @@ func NewCachedAPI(next API, o CacheOptions) *CachedAPI {
 	}
 }
 
+// Shared reports whether the cache stands in for a shared cluster (DAX
+// semantics), in which case no cross-replica watcher is needed.
+func (c *CachedAPI) Shared() bool { return c.opts.DAXSemantics }
+
 // ItemStats and QueryStats expose cache counters.
 func (c *CachedAPI) ItemStats() cache.Stats  { return c.items.Stats() }
 func (c *CachedAPI) QueryStats() cache.Stats { return c.queries.Stats() }
@@ -144,6 +154,15 @@ func stripe(k string) int {
 // whether the write may have changed a secondary index.
 func (c *CachedAPI) invalidate(table string, key map[string]types.AttributeValue, index bool) {
 	g := c.gen(table)
+	if c.opts.DAXSemantics {
+		// DAX: write-through item cache, query cache untouched.
+		if key != nil {
+			k := itemKey(table, key)
+			g.stripes[stripe(k)].Add(1)
+			c.items.Delete(k)
+		}
+		return
+	}
 	g.all.Add(1)
 	if index {
 		g.index.Add(1)

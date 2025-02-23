@@ -5,6 +5,7 @@ package stacktest
 
 import (
 	"context"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -26,9 +27,10 @@ import (
 
 // Stack is a running set of services.
 type Stack struct {
-	t      testing.TB
-	DB     *ddb.Clients
-	Prefix string
+	t         testing.TB
+	DB        *ddb.Clients
+	Prefix    string
+	CacheMode string
 
 	CatalogConn, AppsConn, TimelineConn *grpc.ClientConn
 
@@ -48,11 +50,16 @@ type Stack struct {
 }
 
 // New starts the stack with the given cache mode and running consumers.
+// WAYPOINT_TEST_CACHE_MODE, when set, overrides the mode so CI can run the
+// same system tests with the cache off, local and with DAX semantics.
 func New(t testing.TB, cacheMode string) *Stack {
 	t.Helper()
+	if m := os.Getenv("WAYPOINT_TEST_CACHE_MODE"); m != "" {
+		cacheMode = m
+	}
 	db, prefix := testutil.Tables(t, cacheMode)
 	log := testutil.Logger(t)
-	s := &Stack{t: t, DB: db, Prefix: prefix}
+	s := &Stack{t: t, DB: db, Prefix: prefix, CacheMode: cacheMode}
 
 	catTable := prefix + ddb.TableCatalog
 	catOB := events.NewOutbox(db.API, catTable, "catalog", log)

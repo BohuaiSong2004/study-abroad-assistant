@@ -99,7 +99,7 @@ func (b *Base) Serve(table string, workers ...func(context.Context) error) {
 // cache coherent with writes made by other replicas, or nil when the local
 // cache is not in use (CACHE_MODE=off, or dax: the DAX cluster is shared).
 func (b *Base) CacheWatcher(ob *events.Outbox, invalidate func(*ddb.CachedAPI, string) func(*eventsv1.Event)) func(context.Context) error {
-	if b.DB.Local == nil {
+	if b.DB.Local == nil || b.DB.Local.Shared() {
 		return func(ctx context.Context) error { <-ctx.Done(); return nil }
 	}
 	fn := invalidate(b.DB.Local, ob.Table())

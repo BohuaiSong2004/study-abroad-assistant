@@ -77,10 +77,22 @@ jobs:
         with:
           name: coverage
           path: coverage.out
+      - name: System and gateway tests with the cache off and with DAX semantics
+        run: |
+          for mode in off daxsim; do
+            echo "== WAYPOINT_TEST_CACHE_MODE=$mode"
+            WAYPOINT_TEST_CACHE_MODE=$mode go test ./internal/stacktest/ ./internal/gateway/ -race -count=1
+          done
 
   e2e:
-    name: Browser tests (Playwright)
+    name: Browser tests (Playwright, CACHE_MODE=${{ matrix.cache }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # local: the default in-process cache; daxsim: the same cache with
+        # DAX's weaker contract (writes do not invalidate cached queries).
+        cache: [local, daxsim]
     services:
       dynamodb:
         image: amazon/dynamodb-local:latest
@@ -99,7 +111,7 @@ jobs:
           cache-dependency-path: e2e/package-lock.json
       - name: Start the stack (README dev mode)
         run: |
-          ./scripts/dev.sh > dev.log 2>&1 &
+          CACHE_MODE=${{ matrix.cache }} ./scripts/dev.sh > dev.log 2>&1 &
           for i in $(seq 1 120); do grep -q "Waypoint is running" dev.log && break; sleep 1; done
           grep -q "Waypoint is running" dev.log || (cat dev.log; exit 1)
       - name: Install Playwright
@@ -116,7 +128,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.cache }}
           path: |
             e2e/playwright-report
             e2e/test-results
