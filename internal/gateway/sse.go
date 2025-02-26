@@ -55,11 +55,14 @@ func (h *Hub) Run(ctx context.Context) error {
 	backoff := 200 * time.Millisecond
 	first := true
 	for ctx.Err() == nil {
-		err := h.session(ctx, !first)
+		healthy, err := h.session(ctx, !first)
 		first = false
 		h.setReady(false)
 		if ctx.Err() != nil {
 			return nil
+		}
+		if healthy {
+			backoff = 200 * time.Millisecond
 		}
 		h.log.Warn("timeline stream disconnected", "error", err)
 		select {
@@ -78,16 +81,16 @@ func (h *Hub) setReady(v bool) {
 	h.mu.Unlock()
 }
 
-func (h *Hub) session(ctx context.Context, resync bool) error {
+func (h *Hub) session(ctx context.Context, resync bool) (bool, error) {
 	st, err := h.client.Subscribe(ctx, &eventsv1.SubscribeRequest{FromTail: true})
 	if err != nil {
-		return err
+		return false, err
 	}
 	connected := false
 	for {
 		msg, err := st.Recv()
 		if err != nil {
-			return err
+			return connected, err
 		}
 		if !connected {
 			connected = true

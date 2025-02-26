@@ -146,11 +146,15 @@ func (c *Consumer) Run(ctx context.Context) error {
 func (c *Consumer) loop(ctx context.Context) error {
 	backoff := 100 * time.Millisecond
 	for {
-		err := c.session(ctx)
+		healthy, err := c.session(ctx)
 		consumerConnected.WithLabelValues(c.name).Set(0)
 		c.update(func(s *Status) { s.Connected = false })
 		if ctx.Err() != nil {
 			return nil
+		}
+		if healthy {
+			// The stream worked; this is a fresh failure, not a retry storm.
+			backoff = 100 * time.Millisecond
 		}
 		c.log.Warn("event stream disconnected; reconnecting", "error", err, "backoff", backoff)
 		sleep := backoff/2 + time.Duration(rand.Int64N(int64(backoff)))
@@ -162,33 +166,32 @@ func (c *Consumer) loop(ctx context.Context) error {
 		if backoff *= 2; backoff > 10*time.Second {
 			backoff = 10 * time.Second
 		}
-		if err == nil {
-			backoff = 100 * time.Millisecond
-		}
 	}
 }
 
-// session runs one Subscribe call. It returns when the stream breaks.
-func (c *Consumer) session(ctx context.Context) error {
+// session runs one Subscribe call until the stream breaks. healthy reports
+// whether it received anything (so the caller can reset its backoff).
+func (c *Consumer) session(ctx context.Context) (healthy bool, err error) {
 	cursor, err := c.loadCursor(ctx)
 	if err != nil {
-		return fmt.Errorf("load cursor: %w", err)
+		return false, fmt.Errorf("load cursor: %w", err)
 	}
 	c.update(func(s *Status) { s.Cursor = cursor })
 	sctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	stream, err := c.client.Subscribe(sctx, &eventsv1.SubscribeRequest{AfterSeq: cursor})
 	if err != nil {
-		return err
+		return false, err
 	}
 	for {
 		msg, err := stream.Recv()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return nil
+				return healthy, nil
 			}
-			return err
+			return healthy, err
 		}
+		healthy = true
 		consumerConnected.WithLabelValues(c.name).Set(1)
 		c.update(func(s *Status) { s.Connected = true })
 		switch k := msg.Kind.(type) {
@@ -200,11 +203,11 @@ func (c *Consumer) session(ctx context.Context) error {
 				continue // duplicate from a racing reconnect
 			}
 			if err := c.apply(ctx, ev); err != nil {
-				return err
+				return healthy, err
 			}
 			cursor = ev.Seq
 			if err := c.saveCursor(ctx, cursor); err != nil {
-				return fmt.Errorf("save cursor: %w", err)
+				return healthy, fmt.Errorf("save cursor: %w", err)
 			}
 			consumerApplied.WithLabelValues(c.name).Inc()
 			syncLatency.WithLabelValues(c.name).Observe(time.Since(ev.OccurredAt.AsTime()).Seconds())

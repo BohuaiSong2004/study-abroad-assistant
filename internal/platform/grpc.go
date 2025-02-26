@@ -162,35 +162,57 @@ type ctxStream struct {
 
 func (s *ctxStream) Context() context.Context { return s.ctx }
 
-// retryPolicy retries calls that fail with UNAVAILABLE (connection loss,
-// pod restart). Mutating RPCs are safe to retry because every write is
-// guarded by a DynamoDB condition (version or attribute_not_exists).
-const serviceConfig = `{
+// serviceConfig: unary calls get a deadline and retry on UNAVAILABLE
+// (connection loss, pod restart). Mutating RPCs are safe to retry because
+// every write is guarded by a DynamoDB condition (version or
+// attribute_not_exists).
+//
+// The long-lived EventStreamService/Subscribe stream must NOT inherit the
+// default timeout: an earlier version applied it to every method, which
+// killed each sync stream after 10 seconds. A method-specific entry wins
+// over the default one, so Subscribe is listed explicitly with no timeout.
+func serviceConfig(unaryTimeout time.Duration) string {
+	return fmt.Sprintf(`{
   "loadBalancingConfig": [{"round_robin": {}}],
-  "methodConfig": [{
-    "name": [{}],
-    "timeout": "10s",
-    "retryPolicy": {
-      "maxAttempts": 4,
-      "initialBackoff": "0.05s",
-      "maxBackoff": "1s",
-      "backoffMultiplier": 2,
-      "retryableStatusCodes": ["UNAVAILABLE"]
+  "methodConfig": [
+    {
+      "name": [{}],
+      "timeout": "%.3fs",
+      "retryPolicy": {
+        "maxAttempts": 4,
+        "initialBackoff": "0.05s",
+        "maxBackoff": "1s",
+        "backoffMultiplier": 2,
+        "retryableStatusCodes": ["UNAVAILABLE"]
+      }
+    },
+    {
+      "name": [{"service": "waypoint.events.v1.EventStreamService", "method": "Subscribe"}]
     }
-  }]
-}`
+  ]
+}`, unaryTimeout.Seconds())
+}
+
+// DialOptions are the client options every connection uses; tests use them
+// with an in-memory dialer so they exercise the production configuration.
+func DialOptions(internalToken string, unaryTimeout time.Duration) []grpc.DialOption {
+	if unaryTimeout <= 0 {
+		unaryTimeout = 10 * time.Second
+	}
+	return []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultServiceConfig(serviceConfig(unaryTimeout)),
+		grpc.WithChainUnaryInterceptor(clientMetrics.UnaryClientInterceptor(), ClientUnaryInterceptor(internalToken)),
+		grpc.WithChainStreamInterceptor(clientMetrics.StreamClientInterceptor(), ClientStreamInterceptor(internalToken)),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: 10 * time.Second, PermitWithoutStream: true}),
+	}
+}
 
 // Dial creates a client connection that propagates the internal token,
 // request id and principal on every call. Use "dns:///host:port" targets for
 // client-side round-robin across replicas.
 func Dial(target, internalToken string) (*grpc.ClientConn, error) {
-	return grpc.NewClient(target,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultServiceConfig(serviceConfig),
-		grpc.WithChainUnaryInterceptor(clientMetrics.UnaryClientInterceptor(), ClientUnaryInterceptor(internalToken)),
-		grpc.WithChainStreamInterceptor(clientMetrics.StreamClientInterceptor(), ClientStreamInterceptor(internalToken)),
-		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: 10 * time.Second, PermitWithoutStream: true}),
-	)
+	return grpc.NewClient(target, DialOptions(internalToken, EnvDuration("GRPC_CLIENT_TIMEOUT", 10*time.Second))...)
 }
 
 // ClientUnaryInterceptor attaches the internal contract metadata.
