@@ -247,10 +247,14 @@ func (s *Server) deleteApplication(w http.ResponseWriter, r *http.Request) {
 
 // --- timeline --------------------------------------------------------------
 
+// fresh reports whether the client asked for a strongly consistent read
+// (?fresh=1): the pages set it when reloading after a live update.
+func fresh(r *http.Request) bool { return r.URL.Query().Get("fresh") == "1" }
+
 func (s *Server) getTimeline(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := s.backend(r)
 	defer cancel()
-	t, err := s.c.Timeline.GetTimeline(ctx, &timelinev1.GetTimelineRequest{ApplicationId: r.PathValue("id")})
+	t, err := s.c.Timeline.GetTimeline(ctx, &timelinev1.GetTimelineRequest{ApplicationId: r.PathValue("id"), Consistent: fresh(r)})
 	if err != nil {
 		writeRPCError(w, r, s.log, err)
 		return
@@ -261,7 +265,7 @@ func (s *Server) getTimeline(w http.ResponseWriter, r *http.Request) {
 func (s *Server) listTimelines(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := s.backend(r)
 	defer cancel()
-	res, err := s.c.Timeline.ListTimelines(ctx, &timelinev1.ListTimelinesRequest{})
+	res, err := s.c.Timeline.ListTimelines(ctx, &timelinev1.ListTimelinesRequest{Consistent: fresh(r)})
 	if err != nil {
 		writeRPCError(w, r, s.log, err)
 		return
@@ -277,7 +281,7 @@ func (s *Server) agenda(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	ctx, cancel := s.backend(r)
 	defer cancel()
-	res, err := s.c.Timeline.GetAgenda(ctx, &timelinev1.GetAgendaRequest{From: q.Get("from"), To: q.Get("to"), IncludeDone: q.Get("includeDone") == "true", TimeZone: q.Get("tz")})
+	res, err := s.c.Timeline.GetAgenda(ctx, &timelinev1.GetAgendaRequest{From: q.Get("from"), To: q.Get("to"), IncludeDone: q.Get("includeDone") == "true", TimeZone: q.Get("tz"), Consistent: fresh(r)})
 	if err != nil {
 		writeRPCError(w, r, s.log, err)
 		return

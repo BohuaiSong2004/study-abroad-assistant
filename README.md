@@ -61,7 +61,10 @@ flowchart LR
 - **Caching**: services read through a narrow `ddb.API` interface implemented by
   the AWS SDK client, the **DAX** client (`aws-dax-go-v2`, production) and an
   in-process **DAX-style read-through cache** (local/dev), selected with
-  `CACHE_MODE=off|local|dax`.
+  `CACHE_MODE=off|local|dax`. Because DAX's query cache ignores writes, CI
+  also runs the system and browser tests with `CACHE_MODE=daxsim` (the local
+  cache with DAX's contract); reads that must reflect a change use strongly
+  consistent reads, which DAX passes through.
 
 Details: [docs/architecture.md](docs/architecture.md) ·
 Measurements: [docs/performance.md](docs/performance.md) ·
@@ -146,7 +149,7 @@ deploy/terraform/      AWS: DynamoDB, DAX, ECS Fargate, ALB, Cloud Map
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `DYNAMODB_ENDPOINT` | (AWS) | e.g. `http://localhost:8000` for DynamoDB Local |
-| `CACHE_MODE` | `local` | `off`, `local` (in-process cache) or `dax` |
+| `CACHE_MODE` | `local` | `off`, `local` (in-process cache), `daxsim` (local cache with DAX semantics, for tests) or `dax` |
 | `DAX_ENDPOINT` | | `daxs://…` cluster endpoint when `CACHE_MODE=dax` |
 | `INTERNAL_TOKEN` | dev value | shared secret between gateway and services (required in production) |
 | `PUBLIC_URL` | `http://localhost:8080` | origin used for invitation links and the CSRF check |

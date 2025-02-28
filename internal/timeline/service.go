@@ -61,7 +61,7 @@ func (s *Service) GetTimeline(ctx context.Context, req *timelinev1.GetTimelineRe
 	if err != nil {
 		return nil, err
 	}
-	r, err := s.store.Get(ctx, me.UserID, req.GetApplicationId(), false)
+	r, err := s.store.Get(ctx, me.UserID, req.GetApplicationId(), req.GetConsistent())
 	if err != nil {
 		return nil, s.mapErr(ctx, err)
 	}
@@ -69,12 +69,12 @@ func (s *Service) GetTimeline(ctx context.Context, req *timelinev1.GetTimelineRe
 }
 
 // ListTimelines returns all of the caller's timelines, soonest deadline first.
-func (s *Service) ListTimelines(ctx context.Context, _ *timelinev1.ListTimelinesRequest) (*timelinev1.ListTimelinesResponse, error) {
+func (s *Service) ListTimelines(ctx context.Context, req *timelinev1.ListTimelinesRequest) (*timelinev1.ListTimelinesResponse, error) {
 	me, err := platform.RequireRole(ctx, platform.RoleStudent)
 	if err != nil {
 		return nil, err
 	}
-	ts, err := s.store.List(ctx, me.UserID)
+	ts, err := s.store.List(ctx, me.UserID, req.GetConsistent())
 	if err != nil {
 		return nil, s.mapErr(ctx, err)
 	}
@@ -118,7 +118,7 @@ func (s *Service) GetAgenda(ctx context.Context, req *timelinev1.GetAgendaReques
 	if to.Before(from) || from.DaysUntil(to) > 366 {
 		return nil, status.Error(codes.InvalidArgument, "window must be 0-366 days")
 	}
-	ts, err := s.store.List(ctx, me.UserID)
+	ts, err := s.store.List(ctx, me.UserID, req.GetConsistent())
 	if err != nil {
 		return nil, s.mapErr(ctx, err)
 	}

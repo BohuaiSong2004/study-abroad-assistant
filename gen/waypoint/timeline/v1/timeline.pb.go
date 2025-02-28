@@ -415,6 +415,10 @@ func (x *Timeline) GetUpdatedAt() *timestamppb.Timestamp {
 type GetTimelineRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ApplicationId string                 `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
+	// Read with strong consistency, bypassing every cache (local or DAX). Set
+	// by clients reloading in response to a change notification, which may
+	// arrive before this replica's cache has caught up.
+	Consistent    bool `protobuf:"varint,2,opt,name=consistent,proto3" json:"consistent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -456,8 +460,19 @@ func (x *GetTimelineRequest) GetApplicationId() string {
 	return ""
 }
 
+func (x *GetTimelineRequest) GetConsistent() bool {
+	if x != nil {
+		return x.Consistent
+	}
+	return false
+}
+
 type ListTimelinesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Read with strong consistency, bypassing every cache (local or DAX). Set
+	// by clients reloading in response to a change notification, which may
+	// arrive before this replica's cache has caught up.
+	Consistent    bool `protobuf:"varint,1,opt,name=consistent,proto3" json:"consistent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -490,6 +505,13 @@ func (x *ListTimelinesRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use ListTimelinesRequest.ProtoReflect.Descriptor instead.
 func (*ListTimelinesRequest) Descriptor() ([]byte, []int) {
 	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ListTimelinesRequest) GetConsistent() bool {
+	if x != nil {
+		return x.Consistent
+	}
+	return false
 }
 
 type ListTimelinesResponse struct {
@@ -544,7 +566,11 @@ type GetAgendaRequest struct {
 	To          string `protobuf:"bytes,2,opt,name=to,proto3" json:"to,omitempty"`
 	IncludeDone bool   `protobuf:"varint,3,opt,name=include_done,json=includeDone,proto3" json:"include_done,omitempty"`
 	// The student's IANA time zone (the browser's); UTC if empty.
-	TimeZone      string `protobuf:"bytes,4,opt,name=time_zone,json=timeZone,proto3" json:"time_zone,omitempty"`
+	TimeZone string `protobuf:"bytes,4,opt,name=time_zone,json=timeZone,proto3" json:"time_zone,omitempty"`
+	// Read with strong consistency, bypassing every cache (local or DAX). Set
+	// by clients reloading in response to a change notification, which may
+	// arrive before this replica's cache has caught up.
+	Consistent    bool `protobuf:"varint,5,opt,name=consistent,proto3" json:"consistent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -605,6 +631,13 @@ func (x *GetAgendaRequest) GetTimeZone() string {
 		return x.TimeZone
 	}
 	return ""
+}
+
+func (x *GetAgendaRequest) GetConsistent() bool {
+	if x != nil {
+		return x.Consistent
+	}
+	return false
 }
 
 type AgendaItem struct {
@@ -1202,17 +1235,26 @@ const file_waypoint_timeline_v1_timeline_proto_rawDesc = "" +
 	"\x13application_version\x18\x0f \x01(\x03R\x12applicationVersion\x12'\n" +
 	"\x0fprogram_version\x18\x10 \x01(\x03R\x0eprogramVersion\x129\n" +
 	"\n" +
-	"updated_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\";\n" +
+	"updated_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"[\n" +
 	"\x12GetTimelineRequest\x12%\n" +
-	"\x0eapplication_id\x18\x01 \x01(\tR\rapplicationId\"\x16\n" +
-	"\x14ListTimelinesRequest\"U\n" +
+	"\x0eapplication_id\x18\x01 \x01(\tR\rapplicationId\x12\x1e\n" +
+	"\n" +
+	"consistent\x18\x02 \x01(\bR\n" +
+	"consistent\"6\n" +
+	"\x14ListTimelinesRequest\x12\x1e\n" +
+	"\n" +
+	"consistent\x18\x01 \x01(\bR\n" +
+	"consistent\"U\n" +
 	"\x15ListTimelinesResponse\x12<\n" +
-	"\ttimelines\x18\x01 \x03(\v2\x1e.waypoint.timeline.v1.TimelineR\ttimelines\"v\n" +
+	"\ttimelines\x18\x01 \x03(\v2\x1e.waypoint.timeline.v1.TimelineR\ttimelines\"\x96\x01\n" +
 	"\x10GetAgendaRequest\x12\x12\n" +
 	"\x04from\x18\x01 \x01(\tR\x04from\x12\x0e\n" +
 	"\x02to\x18\x02 \x01(\tR\x02to\x12!\n" +
 	"\finclude_done\x18\x03 \x01(\bR\vincludeDone\x12\x1b\n" +
-	"\ttime_zone\x18\x04 \x01(\tR\btimeZone\"\xb5\x01\n" +
+	"\ttime_zone\x18\x04 \x01(\tR\btimeZone\x12\x1e\n" +
+	"\n" +
+	"consistent\x18\x05 \x01(\bR\n" +
+	"consistent\"\xb5\x01\n" +
 	"\n" +
 	"AgendaItem\x12%\n" +
 	"\x0eapplication_id\x18\x01 \x01(\tR\rapplicationId\x12!\n" +

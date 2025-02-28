@@ -76,9 +76,18 @@ message Timeline {
 
 message GetTimelineRequest {
   string application_id = 1;
+  // Read with strong consistency, bypassing every cache (local or DAX). Set
+  // by clients reloading in response to a change notification, which may
+  // arrive before this replica's cache has caught up.
+  bool consistent = 2;
 }
 
-message ListTimelinesRequest {}
+message ListTimelinesRequest {
+  // Read with strong consistency, bypassing every cache (local or DAX). Set
+  // by clients reloading in response to a change notification, which may
+  // arrive before this replica's cache has caught up.
+  bool consistent = 1;
+}
 
 message ListTimelinesResponse {
   repeated Timeline timelines = 1;
@@ -92,6 +101,10 @@ message GetAgendaRequest {
   bool include_done = 3;
   // The student's IANA time zone (the browser's); UTC if empty.
   string time_zone = 4;
+  // Read with strong consistency, bypassing every cache (local or DAX). Set
+  // by clients reloading in response to a change notification, which may
+  // arrive before this replica's cache has caught up.
+  bool consistent = 5;
 }
 
 message AgendaItem {

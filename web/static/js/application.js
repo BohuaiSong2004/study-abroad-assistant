@@ -46,7 +46,7 @@ jQuery(function ($) {
     });
   }
 
-  var refresh = WP.debounce(function () { loadApp(); loadTimeline(); loadRecs(); }, 120);
+  var refresh = WP.debounce(function () { loadApp(); loadTimeline(true); loadRecs(); }, 120);
 
   function loadApp() {
     return WP.api("GET", base).then(function (a) {
@@ -71,8 +71,8 @@ jQuery(function ($) {
   }
 
   var pendingRetry = null;
-  function loadTimeline() {
-    return WP.api("GET", base + "/timeline").then(function (t) {
+  function loadTimeline(fresh) {
+    return WP.api("GET", base + "/timeline" + (fresh === true ? "?fresh=1" : "")).then(function (t) {
       tl = t;
       $("#tl-pending").prop("hidden", true);
       renderTimeline();

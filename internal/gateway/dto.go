@@ -306,7 +306,11 @@ type timelineDTO struct {
 	Warnings          []string       `json:"warnings"`
 	Progress          progressDTO    `json:"progress"`
 	Version           int64          `json:"version"`
-	UpdatedAt         string         `json:"updatedAt"`
+	// ApplicationVersion is the application version the timeline was planned
+	// from; a page compares it with the (strongly consistent) application to
+	// tell a cached, older timeline from a current one.
+	ApplicationVersion int64  `json:"applicationVersion"`
+	UpdatedAt          string `json:"updatedAt"`
 }
 
 func milestoneOut(m *timelinev1.Milestone) milestoneDTO {
@@ -325,7 +329,7 @@ func timelineOut(t *timelinev1.Timeline) timelineDTO {
 		ApplicationID: t.ApplicationId, ProgramID: t.ProgramId, ProgramName: t.ProgramName, University: t.University,
 		Intake: t.Intake, Round: roundName(t.Round), EffectiveRound: roundName(t.EffectiveRound),
 		RoundLabel: timeline.RoundLabel(t.EffectiveRound), Deadline: t.Deadline, Timezone: t.Timezone,
-		ApplicationStatus: statusName(t.ApplicationStatus), Version: t.Version, UpdatedAt: ts(t.UpdatedAt),
+		ApplicationStatus: statusName(t.ApplicationStatus), Version: t.Version, ApplicationVersion: t.ApplicationVersion, UpdatedAt: ts(t.UpdatedAt),
 		Milestones: []milestoneDTO{}, Warnings: append([]string{}, t.Warnings...),
 	}
 	for _, m := range t.Milestones {

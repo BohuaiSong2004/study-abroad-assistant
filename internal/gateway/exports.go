@@ -36,7 +36,7 @@ func (s *Server) studentName(r *http.Request) string {
 func (s *Server) timelineXML(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := s.backend(r)
 	defer cancel()
-	t, err := s.c.Timeline.GetTimeline(ctx, &timelinev1.GetTimelineRequest{ApplicationId: r.PathValue("id")})
+	t, err := s.c.Timeline.GetTimeline(ctx, &timelinev1.GetTimelineRequest{ApplicationId: r.PathValue("id"), Consistent: true})
 	if err != nil {
 		writeRPCError(w, r, s.log, err)
 		return
@@ -49,7 +49,7 @@ func (s *Server) timelineXML(w http.ResponseWriter, r *http.Request) {
 func (s *Server) allTimelinesXML(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := s.backend(r)
 	defer cancel()
-	res, err := s.c.Timeline.ListTimelines(ctx, &timelinev1.ListTimelinesRequest{})
+	res, err := s.c.Timeline.ListTimelines(ctx, &timelinev1.ListTimelinesRequest{Consistent: true}) // exports are rare; never stale
 	if err != nil {
 		writeRPCError(w, r, s.log, err)
 		return

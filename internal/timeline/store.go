@@ -83,11 +83,12 @@ func (s *Store) Get(ctx context.Context, sid, aid string, consistent bool) (*rec
 	return &record{tl: t, app: &a}, nil
 }
 
-// List returns all of a student's timelines (eventually consistent; may be
-// served from the query cache).
-func (s *Store) List(ctx context.Context, sid string) ([]*timelinev1.Timeline, error) {
+// List returns all of a student's timelines. Unless consistent, it may be
+// served from the query cache.
+func (s *Store) List(ctx context.Context, sid string, consistent bool) ([]*timelinev1.Timeline, error) {
 	in := &dynamodb.QueryInput{
 		TableName:              aws.String(s.table),
+		ConsistentRead:         aws.Bool(consistent),
 		KeyConditionExpression: aws.String("pk = :pk AND begins_with(sk, :p)"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
 			":pk": ddb.S("STUDENT#" + sid), ":p": ddb.S("TL#"),

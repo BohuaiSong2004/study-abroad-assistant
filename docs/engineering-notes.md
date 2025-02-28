@@ -133,3 +133,16 @@ that serves `Subscribe`) and drops the keys each event changed; event handlers
 read the program projection with a strongly consistent read. A test runs three
 cache instances over one table: the watching replica sees another's write
 within a poll interval, a control without the watcher stays stale.
+
+## 10. Code verified only against a cache stricter than production's
+
+The local cache invalidates cached queries on every write; DAX does not, so
+the tests could not catch a read that relied on that. A `daxsim` mode (same
+cache, DAX's contract) and a CI run of the system and browser tests under it
+found one: the dashboard cached an empty timeline list before the planner had
+written the timeline, and a student coming back to the dashboard saw
+"Planning timeline…" for up to the query TTL (no live update was due, since
+the change had already happened). Fix: compare timeline and application
+versions and re-read past the cache when behind; reloads triggered by live
+updates ask for consistent reads. `TestReloadAfterChangeNotificationSeesTheChange`
+asserts the contract per cache mode.

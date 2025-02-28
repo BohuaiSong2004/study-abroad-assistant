@@ -148,7 +148,23 @@ with strong consistency, so a replica that has just taken over the consumer
 lease never re-plans with a cached, older program.
 
 In production (`CACHE_MODE=dax`) the DAX cluster is a shared, write-through
-item cache; the watcher is not started.
+item cache; the watcher is not started. DAX's contract is weaker than the
+local cache's in one way that matters: its **query cache is not invalidated
+by writes**, only by its TTL. Nothing correctness-relevant depends on query
+invalidation:
+
+- writers (event handlers) read with strong consistency or the raw client;
+- a page reloading after a live update asks for `?fresh=1`, which becomes a
+  consistent read;
+- the dashboard compares each timeline's `applicationVersion` with the
+  (consistently read) application and re-reads once past the cache when a
+  timeline is missing or older;
+- XML exports always read consistently.
+
+`CACHE_MODE=daxsim` runs the local cache with DAX's contract, and CI runs the
+system tests and the browser tests under it. It caught the dashboard case:
+a student returning to the dashboard after creating an application saw
+"Planning timeline…" until the query TTL expired.
 
 ## Gateway security
 

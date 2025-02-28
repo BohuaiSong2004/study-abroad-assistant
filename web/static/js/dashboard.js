@@ -6,7 +6,7 @@ jQuery(function ($) {
     WP.renderHeader(account);
     $("#greeting").text("Welcome back, " + account.name + ".");
     load();
-    WP.live(WP.debounce(load, 150));
+    WP.live(WP.debounce(function () { load(true); }, 150));
     WP.ready();
   });
 
@@ -50,19 +50,35 @@ jQuery(function ($) {
     return $li.append($next);
   }
 
+  // fresh: reloading after a live update, so read past every cache (the
+  // notification can arrive before a cache replica has caught up).
   var loading = null;
-  function load() {
+  function load(fresh) {
     if (loading) return loading;
+    var f = fresh === true ? { fresh: 1 } : {};
     loading = $.when(
       WP.api("GET", "/api/applications"),
-      WP.api("GET", "/api/timelines"),
-      WP.api("GET", "/api/agenda?" + $.param({ tz: WP.timeZone() }))
+      WP.api("GET", "/api/timelines?" + $.param(f)),
+      WP.api("GET", "/api/agenda?" + $.param($.extend({ tz: WP.timeZone() }, f)))
     ).then(function (apps, tls, agenda) {
       render(apps.applications, tls.timelines, agenda.items);
+      return behind(apps.applications, tls.timelines);
     }, function (err) {
       WP.toast(err.message, "error");
     }).always(function () { loading = null; });
-    return loading;
+    // Applications are read with strong consistency; timelines may come from
+    // a cache. If any timeline is missing or planned from an older
+    // application version, read once more past the caches. If it is still
+    // behind, the planner has not finished and the live update will follow.
+    return loading.then(function (stale) {
+      if (stale && fresh !== true) return load(true);
+    });
+  }
+
+  function behind(apps, timelines) {
+    var v = {};
+    $.each(timelines, function (_, t) { v[t.applicationId] = t.applicationVersion; });
+    return apps.some(function (a) { return !(a.id in v) || v[a.id] < a.version; });
   }
 
   function render(apps, timelines, items) {
