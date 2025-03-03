@@ -345,3 +345,25 @@ func TestLeaseHasSingleHolderAndExpires(t *testing.T) {
 		t.Fatalf("hold: %v ran=%v", err, ran)
 	}
 }
+
+// Regression: the client service config once applied the unary deadline to
+// every method, so each Subscribe stream died after 10 s and sync stalled
+// while the consumer backed off. Streams must outlive the unary timeout.
+func TestSubscribeOutlivesUnaryDeadline(t *testing.T) {
+	old := testutil.UnaryTimeout
+	testutil.UnaryTimeout = 300 * time.Millisecond
+	t.Cleanup(func() { testutil.UnaryTimeout = old })
+	f := newFixture(t, ServerOptions{Heartbeat: 100 * time.Millisecond})
+	read := collect(t, f, 0)
+	time.Sleep(time.Second) // > 3x the unary deadline
+	if err := f.ob.Commit(context.Background(), nil, spec("late")); err != nil {
+		t.Fatal(err)
+	}
+	if got := values(t, read(1, 3*time.Second)); fmt.Sprint(got) != "[1:late]" {
+		t.Fatalf("stream did not survive the unary deadline: %v", got)
+	}
+	// Unary calls still work under the deadline.
+	if _, err := f.client.Head(context.Background(), &eventsv1.HeadRequest{}); err != nil {
+		t.Fatal(err)
+	}
+}
