@@ -17,6 +17,7 @@ import (
 	"time"
 
 	catalogv1 "github.com/BohuaiSong2004/study-abroad-assistant/gen/waypoint/catalog/v1"
+	"github.com/BohuaiSong2004/study-abroad-assistant/internal/applications"
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/ddb"
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/gateway"
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/stacktest"
@@ -233,6 +234,36 @@ func TestRateLimitPerClientIP(t *testing.T) {
 	res, _ := c.do("POST", "/api/auth/login", creds, "X-Forwarded-For", "203.0.113.9")
 	if res.StatusCode != 429 {
 		t.Fatalf("spoofed X-Forwarded-For bypassed the limiter: %d", res.StatusCode)
+	}
+}
+
+// The shared limits live in the applications service. The gateway forwards
+// the client address and maps the backend's RetryInfo to Retry-After, with
+// the in-memory bucket set high enough not to interfere.
+func TestBackendLockoutReachesTheBrowserAs429(t *testing.T) {
+	e := newEnv(t)
+	e.stack.AccountService.SetLimits(applications.Limits{
+		FailuresPerEmail: applications.Limit{N: 3, Window: 15 * time.Minute},
+		LoginPerIP:       applications.Limit{N: 4, Window: 10 * time.Minute},
+	})
+	c := e.client()
+	c.expect(200, "POST", "/api/auth/register", map[string]any{"email": "gw-lock@example.com", "password": "correct horse battery", "name": "Lock"})
+	for i := 0; i < 3; i++ {
+		c.expect(401, "POST", "/api/auth/login", map[string]any{"email": "gw-lock@example.com", "password": "wrong password"})
+	}
+	res, body := c.do("POST", "/api/auth/login", map[string]any{"email": "gw-lock@example.com", "password": "correct horse battery"})
+	if res.StatusCode != 429 || res.Header.Get("Retry-After") == "" {
+		t.Fatalf("locked account: %d Retry-After=%q", res.StatusCode, res.Header.Get("Retry-After"))
+	}
+	if msg, _ := body["error"].(map[string]any)["message"].(string); !strings.Contains(msg, "failed sign-ins") {
+		t.Fatalf("message %q", msg)
+	}
+	// That was the fourth attempt from this address: the fifth exceeds the
+	// per-address limit whatever the account, which shows the gateway
+	// forwarded the address.
+	res, _ = c.do("POST", "/api/auth/login", map[string]any{"email": "someone-else@example.com", "password": "whatever password"})
+	if res.StatusCode != 429 {
+		t.Fatalf("per-address limit: %d", res.StatusCode)
 	}
 }
 

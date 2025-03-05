@@ -9,11 +9,13 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"golang.org/x/time/rate"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -60,6 +62,11 @@ var grpcToHTTP = map[codes.Code]struct {
 // logged, not returned.
 func writeRPCError(w http.ResponseWriter, r *http.Request, log *slog.Logger, err error) {
 	st := status.Convert(err)
+	for _, d := range st.Details() {
+		if ri, ok := d.(*errdetails.RetryInfo); ok && ri.RetryDelay != nil {
+			w.Header().Set("Retry-After", strconv.Itoa(max(1, int(ri.RetryDelay.AsDuration().Round(time.Second)/time.Second))))
+		}
+	}
 	if m, ok := grpcToHTTP[st.Code()]; ok {
 		writeError(w, m.status, m.slug, st.Message())
 		return

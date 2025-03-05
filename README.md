@@ -154,7 +154,10 @@ deploy/terraform/      AWS: DynamoDB, DAX, ECS Fargate, ALB, Cloud Map
 | `INTERNAL_TOKEN` | dev value | shared secret between gateway and services (required in production) |
 | `PUBLIC_URL` | `http://localhost:8080` | origin used for invitation links and the CSRF check |
 | `TRUSTED_PROXIES` | | CIDRs whose `X-Forwarded-For` is trusted (the load balancer) |
-| `AUTH_RATE_PER_MIN` | `20` | sign-in/sign-up attempts per client IP per minute |
+| `AUTH_RATE_PER_MIN` | `20` | gateway (per replica): sign-in/sign-up attempts per client IP per minute |
+| `LOGIN_LIMIT_PER_IP` | `60` | applications (shared): sign-in attempts per address per 10 minutes |
+| `LOGIN_FAILURES_PER_ACCOUNT` | `10` | applications (shared): failed sign-ins per account per 15 minutes before lockout |
+| `REGISTER_LIMIT_PER_IP` | `20` | applications (shared): sign-ups per address per hour |
 | `CONSUMER_WORKERS` | `8` | parallel event appliers per stream (per-aggregate order kept) |
 | `BOOTSTRAP_COUNSELOR_EMAIL` / `_PASSWORD` | | creates the first counselor account |
 

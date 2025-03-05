@@ -176,8 +176,20 @@ a student returning to the dashboard after creating an application saw
 - Passwords: argon2id (19 MiB, t=2), with bounded hashing concurrency so a
   burst of sign-ins cannot exhaust memory; unknown emails still pay one hash
   (no account enumeration by timing).
-- Rate limits per client IP on sign-in/sign-up and invitation endpoints;
-  `X-Forwarded-For` is only trusted from configured proxies.
+- Rate limits in two layers. The gateway keeps an in-memory token bucket per
+  client IP on sign-in, sign-up and invitation endpoints; it is cheap and
+  protects one replica's CPU from argon2 floods. The authoritative limits are
+  shared across replicas in DynamoDB (fixed windows, `ADD` counters with a
+  TTL, hashed keys) in the applications service: sign-ins and sign-ups per
+  address, and a **per-account lockout** after repeated failed sign-ins,
+  which per-address limits cannot give against a distributed guessing
+  attack. The lockout is counted for unknown emails too (no enumeration) and
+  checked before the password. The gateway forwards the address in gRPC
+  metadata (trusted only with the internal token) and turns the service's
+  `RetryInfo` into `Retry-After`. `X-Forwarded-For` is only trusted from
+  configured proxies. Invitation endpoints keep only the per-replica limit:
+  tokens are 256-bit random, so guessing is not a threat the shared limit
+  would address.
 - Invitation tokens travel in the URL fragment (`#token=`), which browsers never
   send to servers, so they stay out of access logs and `Referer` headers.
 - Strict CSP (`script-src 'self'`, no inline scripts or styles), `nosniff`,

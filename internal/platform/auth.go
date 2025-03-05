@@ -19,6 +19,11 @@ const (
 	MDUserID        = "x-waypoint-user-id"
 	MDUserRole      = "x-waypoint-user-role"
 	MDRequestID     = "x-request-id"
+	// MDClientIP is the end user's address as the gateway determined it
+	// (honouring X-Forwarded-For only from trusted proxies). Services use it
+	// for shared rate limits; like the principal, it is only trusted from
+	// callers holding the internal token.
+	MDClientIP = "x-waypoint-client-ip"
 )
 
 // Roles carried in MDUserRole.
@@ -68,6 +73,20 @@ func RequireRole(ctx context.Context, roles ...string) (Principal, error) {
 	return p, status.Error(codes.PermissionDenied, "not allowed for your role")
 }
 
+type clientIPKey struct{}
+
+// WithClientIP records the end user's address in ctx (gateway side).
+func WithClientIP(ctx context.Context, ip string) context.Context {
+	return context.WithValue(ctx, clientIPKey{}, ip)
+}
+
+// ClientIP returns the end user's address, or "" for calls that did not
+// originate from a browser request (service-to-service, tests).
+func ClientIP(ctx context.Context) string {
+	ip, _ := ctx.Value(clientIPKey{}).(string)
+	return ip
+}
+
 // principalFromIncoming validates the internal token and extracts the
 // principal from incoming gRPC metadata.
 func principalFromIncoming(ctx context.Context, token string) (context.Context, error) {
@@ -82,6 +101,9 @@ func principalFromIncoming(ctx context.Context, token string) (context.Context, 
 	if uid := first(md, MDUserID); uid != "" {
 		ctx = WithPrincipal(ctx, Principal{UserID: uid, Role: first(md, MDUserRole)})
 	}
+	if ip := first(md, MDClientIP); ip != "" {
+		ctx = WithClientIP(ctx, ip)
+	}
 	return ctx, nil
 }
 
@@ -93,6 +115,9 @@ func outgoing(ctx context.Context, token string) context.Context {
 	}
 	if p, ok := PrincipalFrom(ctx); ok && p.UserID != "" {
 		kv = append(kv, MDUserID, p.UserID, MDUserRole, p.Role)
+	}
+	if ip := ClientIP(ctx); ip != "" {
+		kv = append(kv, MDClientIP, ip)
 	}
 	return metadata.AppendToOutgoingContext(ctx, kv...)
 }

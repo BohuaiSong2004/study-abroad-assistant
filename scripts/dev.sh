@@ -17,6 +17,8 @@ export CATALOG_ADDR=dns:///localhost:9091 APPLICATIONS_ADDR=dns:///localhost:909
 # The limiter stays on in development; the threshold is raised so the e2e
 # suite (many sign-ups from one IP) runs without 429s.
 export AUTH_RATE_PER_MIN="${AUTH_RATE_PER_MIN:-300}"
+export LOGIN_LIMIT_PER_IP="${LOGIN_LIMIT_PER_IP:-2000}"
+export REGISTER_LIMIT_PER_IP="${REGISTER_LIMIT_PER_IP:-2000}"
 export BOOTSTRAP_COUNSELOR_EMAIL="${BOOTSTRAP_COUNSELOR_EMAIL:-counselor@example.com}"
 export BOOTSTRAP_COUNSELOR_PASSWORD="${BOOTSTRAP_COUNSELOR_PASSWORD:-counselor-demo-password}"
 

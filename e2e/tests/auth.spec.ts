@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import { password, registerStudent } from "./helpers";
+import { expect, request, test } from "@playwright/test";
+import { baseURL, password, registerStudent } from "./helpers";
 
 test("register, sign out and sign back in", async ({ page }) => {
   const { email } = await registerStudent(page, "Lena Park");
@@ -60,4 +60,24 @@ test.describe("before JavaScript runs", () => {
     await page.waitForURL("**/dashboard.html");
     expect(page.url()).not.toContain("password");
   });
+});
+
+test("repeated wrong passwords lock the account with an explanation", async ({ page }) => {
+  const { email } = await registerStudent(page, "Lock Out");
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await page.waitForURL((u) => u.pathname === "/");
+  // Ten failures (the default lockout threshold), from any client.
+  const api = await request.newContext({ baseURL, extraHTTPHeaders: { Origin: baseURL } });
+  for (let i = 0; i < 10; i++) {
+    const res = await api.post("/api/auth/login", { data: { email, password: `wrong password ${i}` } });
+    expect(res.status()).toBe(401);
+  }
+  await api.dispose();
+  // Now even the right password is refused, and the form says why and for how long.
+  await page.goto("/?mode=login");
+  await expect(page.locator("body")).toHaveAttribute("data-ready", "true");
+  await page.locator("#login-email").fill(email);
+  await page.locator("#login-password").fill(password);
+  await page.getByRole("button", { name: "Sign in" }).last().click();
+  await expect(page.locator("#login-error")).toHaveText(/Too many failed sign-ins for this account\. Try again in \d+ minutes?\./);
 });

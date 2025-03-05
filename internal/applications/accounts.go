@@ -34,20 +34,27 @@ const SessionTTL = 7 * 24 * time.Hour
 //	pk=USER#<id>        sk=PROFILE  email, name, role, password hash
 //	pk=EMAIL#<email>    sk=EMAIL    user id (uniqueness guard)
 //	pk=SESSION#<sha256> sk=SESSION  user id, expiry (DynamoDB TTL)
+//	pk=RL#...           sk=W#...    rate-limit windows (see ratelimit.go)
 type AccountService struct {
 	appsv1.UnimplementedAccountServiceServer
-	api   ddb.API
-	table string
-	hash  *hasher
-	log   *slog.Logger
-	now   func() time.Time
-	dummy string
+	api    ddb.API
+	table  string
+	hash   *hasher
+	log    *slog.Logger
+	now    func() time.Time
+	dummy  string
+	limits Limits
+	rl     *windows
 }
+
+// SetLimits replaces the abuse limits (DefaultLimits otherwise).
+func (s *AccountService) SetLimits(l Limits) { s.limits = l }
 
 // NewAccountService creates the service. hashConcurrency bounds parallel
 // password hashing.
 func NewAccountService(api ddb.API, table string, hashConcurrency int, log *slog.Logger) *AccountService {
-	s := &AccountService{api: api, table: table, hash: newHasher(hashConcurrency), log: log, now: time.Now}
+	s := &AccountService{api: api, table: table, hash: newHasher(hashConcurrency), log: log, now: time.Now, limits: DefaultLimits()}
+	s.rl = &windows{api: api, table: table, now: func() time.Time { return s.now() }}
 	// Hash compared against when the email is unknown, so response time does
 	// not reveal whether an account exists.
 	s.dummy, _ = s.hash.Hash(context.Background(), ids.Token())
@@ -141,6 +148,16 @@ func (s *AccountService) create(ctx context.Context, email, password, name strin
 
 // Register creates a student account.
 func (s *AccountService) Register(ctx context.Context, req *appsv1.RegisterRequest) (*appsv1.Account, error) {
+	if ip := platform.ClientIP(ctx); ip != "" && s.limits.RegisterPerIP.N > 0 {
+		n, until, err := s.rl.hit(ctx, "register-ip", ip, s.limits.RegisterPerIP)
+		if err != nil {
+			return nil, platform.InternalError(ctx, s.log, "rate limit", err)
+		}
+		if n > s.limits.RegisterPerIP.N {
+			s.log.WarnContext(ctx, "sign-up rate limit reached")
+			return nil, limited("Too many accounts were created from your network.", until, s.now())
+		}
+	}
 	a, err := s.create(ctx, req.GetEmail(), req.GetPassword(), req.GetDisplayName(), appsv1.Role_ROLE_STUDENT)
 	if err == nil {
 		s.log.InfoContext(ctx, "account registered", "account_id", a.Id)
@@ -165,6 +182,9 @@ func (s *AccountService) Authenticate(ctx context.Context, req *appsv1.Authentic
 	if err != nil || len(req.GetPassword()) > 256 {
 		return nil, bad
 	}
+	if err := s.checkLoginLimits(ctx, email); err != nil {
+		return nil, err
+	}
 	g, err := s.api.GetItem(ctx, &dynamodb.GetItemInput{TableName: aws.String(s.table), Key: emailKey(email), ConsistentRead: aws.Bool(true)})
 	if err != nil {
 		return nil, platform.InternalError(ctx, s.log, "lookup email", err)
@@ -186,9 +206,57 @@ func (s *AccountService) Authenticate(ctx context.Context, req *appsv1.Authentic
 		return nil, platform.InternalError(ctx, s.log, "verify password", err)
 	}
 	if !ok || user == nil {
+		s.loginFailed(ctx, email)
 		return nil, bad
 	}
+	if s.limits.FailuresPerEmail.N > 0 {
+		if err := s.rl.reset(ctx, "login-fail", email, s.limits.FailuresPerEmail); err != nil {
+			s.log.WarnContext(ctx, "reset sign-in failures", "error", err)
+		}
+	}
 	return accountFromItem(user), nil
+}
+
+// checkLoginLimits enforces the per-address attempt limit and the
+// per-account lockout. The lockout is counted per email whether or not the
+// account exists, so it reveals nothing about which emails are registered,
+// and it is checked before the password, so a locked-out account cannot be
+// probed further even with the right password.
+func (s *AccountService) checkLoginLimits(ctx context.Context, email string) error {
+	if ip := platform.ClientIP(ctx); ip != "" && s.limits.LoginPerIP.N > 0 {
+		n, until, err := s.rl.hit(ctx, "login-ip", ip, s.limits.LoginPerIP)
+		if err != nil {
+			return platform.InternalError(ctx, s.log, "rate limit", err)
+		}
+		if n > s.limits.LoginPerIP.N {
+			s.log.WarnContext(ctx, "sign-in rate limit reached for an address")
+			return limited("Too many sign-in attempts from your network.", until, s.now())
+		}
+	}
+	if s.limits.FailuresPerEmail.N > 0 {
+		n, until, err := s.rl.count(ctx, "login-fail", email, s.limits.FailuresPerEmail)
+		if err != nil {
+			return platform.InternalError(ctx, s.log, "rate limit", err)
+		}
+		if n >= s.limits.FailuresPerEmail.N {
+			return limited("Too many failed sign-ins for this account.", until, s.now())
+		}
+	}
+	return nil
+}
+
+func (s *AccountService) loginFailed(ctx context.Context, email string) {
+	if s.limits.FailuresPerEmail.N <= 0 {
+		return
+	}
+	n, _, err := s.rl.hit(ctx, "login-fail", email, s.limits.FailuresPerEmail)
+	if err != nil {
+		s.log.WarnContext(ctx, "count sign-in failure", "error", err)
+		return
+	}
+	if n == s.limits.FailuresPerEmail.N {
+		s.log.WarnContext(ctx, "account locked after repeated failed sign-ins")
+	}
 }
 
 // CreateSession issues a session token for an account.

@@ -332,5 +332,6 @@ func (s *Server) rateLimit(l *limiter) func(handler) handler {
 // backend returns a context for a backend call with the request's identity
 // and a deadline.
 func (s *Server) backend(r *http.Request) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(r.Context(), s.cfg.RequestTimeout)
+	ctx := platform.WithClientIP(r.Context(), clientIP(r, s.cfg.TrustedProxies))
+	return context.WithTimeout(ctx, s.cfg.RequestTimeout)
 }

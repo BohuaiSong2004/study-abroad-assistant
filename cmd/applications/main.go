@@ -30,6 +30,12 @@ func main() {
 	ob := events.NewOutbox(b.DB.API, table, "applications", b.Log)
 	store := applications.NewStore(b.DB.API, table, ob)
 	accounts := applications.NewAccountService(b.DB.API, table, platform.EnvInt("PASSWORD_HASH_CONCURRENCY", 4), b.Log)
+	d := applications.DefaultLimits()
+	accounts.SetLimits(applications.Limits{
+		LoginPerIP:       applications.Limit{N: platform.EnvInt("LOGIN_LIMIT_PER_IP", d.LoginPerIP.N), Window: d.LoginPerIP.Window},
+		FailuresPerEmail: applications.Limit{N: platform.EnvInt("LOGIN_FAILURES_PER_ACCOUNT", d.FailuresPerEmail.N), Window: d.FailuresPerEmail.Window},
+		RegisterPerIP:    applications.Limit{N: platform.EnvInt("REGISTER_LIMIT_PER_IP", d.RegisterPerIP.N), Window: d.RegisterPerIP.Window},
+	})
 	appsv1.RegisterAccountServiceServer(b.GRPC, accounts)
 	appsv1.RegisterApplicationServiceServer(b.GRPC, applications.NewApplicationService(store, accounts, catalogClient, b.Log))
 	appsv1.RegisterRecommendationServiceServer(b.GRPC, applications.NewRecommendationService(store, accounts, catalogClient, b.Log))
