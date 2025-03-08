@@ -193,6 +193,8 @@ func TestCSRFAndRequestValidation(t *testing.T) {
 		t.Fatalf("cross-origin: %v", out)
 	}
 	c.expect(403, "POST", "/api/applications", body, "Origin", "", "Sec-Fetch-Site", "cross-site")
+	// Browsers send "Origin: null" from opaque contexts (sandboxed frames,
+	// some redirects): never treat it as same-origin.
 	c.expect(403, "DELETE", "/api/applications/x", nil, "Origin", "null")
 	// Configured public origin is accepted even though it differs from Host.
 	c.expect(201, "POST", "/api/applications", body, "Origin", "http://waypoint.test")
