@@ -146,3 +146,12 @@ the change had already happened). Fix: compare timeline and application
 versions and re-read past the cache when behind; reloads triggered by live
 updates ask for consistent reads. `TestReloadAfterChangeNotificationSeesTheChange`
 asserts the contract per cache mode.
+
+## 11. Two navigations after deleting an application
+
+The browser journey test failed about one run in six with `ERR_ABORTED` after
+"Delete application". The delete handler navigates to the dashboard, and the
+live update reporting the same deletion arrives within milliseconds and
+navigates too; the second navigation aborts the first. Users never noticed
+(they land on the dashboard either way), but it was a real race. The page now
+navigates once; the test passed 10 of 10 repeated runs afterwards.

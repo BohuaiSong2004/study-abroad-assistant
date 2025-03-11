@@ -21,7 +21,7 @@ jQuery(function ($) {
     loaded.always(function () { WP.ready(); });
     WP.live(function (u) {
       if (u.type === "resync" || u.applicationId === id) {
-        if (u.deleted) { window.location.assign("/dashboard.html"); return; }
+        if (u.deleted) { leave(); return; }
         refresh();
       }
     });
@@ -263,10 +263,19 @@ jQuery(function ($) {
     }, function (err) { WP.showError($err, err); });
   });
 
+  // Deleting navigates away; so does the live update that reports the
+  // deletion, which usually arrives at the same moment. Navigate once.
+  var leaving = false;
+  function leave() {
+    if (leaving) return;
+    leaving = true;
+    window.location.assign("/dashboard.html");
+  }
+
   $("#delete-app").on("click", function () {
     if (!window.confirm("Delete this application and all recommendation requests? This cannot be undone.")) return;
     WP.busy($(this), WP.api("DELETE", base)).then(function () {
-      window.location.assign("/dashboard.html");
+      leave();
     }, function (err) { WP.toast(err.message, "error"); });
   });
 });
