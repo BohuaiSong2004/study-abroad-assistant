@@ -6,9 +6,14 @@ jQuery(function ($) {
   WP.publicPage = true;
   WP.renderHeader(null);
 
+  // Pasting a different link into the address bar only changes the
+  // fragment, which does not reload the page by itself.
+  $(window).on("hashchange", function () { window.location.reload(); });
+
   var token = new URLSearchParams(window.location.hash.slice(1)).get("token") || "";
   if (!token) {
     $("#invite-error").text("This link is incomplete. Open the full link from the student's email.");
+    WP.ready();
     return;
   }
 
@@ -36,10 +41,9 @@ jQuery(function ($) {
     if (inv.status !== "requested") showDone(inv);
   }
 
-  WP.api("POST", "/api/invites/lookup", { token: token }).then(function (inv) {
-    show(inv);
-    WP.ready();
-  }, function (err) { WP.showError($("#invite-error"), err); });
+  WP.api("POST", "/api/invites/lookup", { token: token }).then(show, function (err) {
+    WP.showError($("#invite-error"), err);
+  }).always(WP.ready);
 
   var $letter = $("#letter");
   $letter.on("input", function () {
