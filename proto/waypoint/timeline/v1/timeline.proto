@@ -6,6 +6,18 @@ import "google/protobuf/timestamp.proto";
 import "waypoint/applications/v1/applications.proto";
 import "waypoint/catalog/v1/catalog.proto";
 
+// SyncAdminService is the operator API for the timeline service's event
+// consumers (caller role "service", e.g. waypointctl): inspect and replay
+// dead letters, and re-plan timelines after a planner fix.
+service SyncAdminService {
+  rpc ListDeadLetters(ListDeadLettersRequest) returns (ListDeadLettersResponse);
+  rpc ReplayDeadLetter(ReplayDeadLetterRequest) returns (ReplayDeadLetterResponse);
+  // Resync re-plans timelines from their stored application snapshot and the
+  // current program, writing only those whose plan changes. Replaying the
+  // streams would not do this: the handlers skip events already applied.
+  rpc Resync(ResyncRequest) returns (ResyncResponse);
+}
+
 // TimelineService owns each application's plan: dated milestones generated
 // from the program's round deadline and requirements (catalog stream) and the
 // application's checklist and recommendations (applications stream), plus the
@@ -149,6 +161,49 @@ message StreamStatus {
   bool leader = 5;
   google.protobuf.Timestamp last_event_at = 6;
   int64 events_applied = 7;
+  // Events parked after a permanent handler error (see SyncAdminService).
+  int64 dead_letters = 8;
+}
+
+message DeadLetter {
+  string consumer = 1;
+  int64 seq = 2;
+  string type = 3;
+  string aggregate_id = 4;
+  string error = 5;
+  google.protobuf.Timestamp parked_at = 6;
+}
+
+message ListDeadLettersRequest {
+  // Empty lists every consumer's.
+  string consumer = 1;
+  int32 limit = 2;
+}
+
+message ListDeadLettersResponse {
+  repeated DeadLetter dead_letters = 1;
+}
+
+message ReplayDeadLetterRequest {
+  string consumer = 1;
+  int64 seq = 2;
+}
+
+message ReplayDeadLetterResponse {
+  // False if the handler failed again; error says why and the event stays
+  // parked.
+  bool applied = 1;
+  string error = 2;
+}
+
+message ResyncRequest {
+  // Empty re-plans every timeline.
+  string student_id = 1;
+}
+
+message ResyncResponse {
+  int64 timelines = 1;
+  int64 replanned = 2;
 }
 
 message GetSyncStatusResponse {

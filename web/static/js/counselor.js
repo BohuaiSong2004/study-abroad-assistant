@@ -126,7 +126,9 @@ jQuery(function ($) {
       var $b = $("#sync-rows").empty();
       $.each(res.streams, function (_, s) {
         var state = s.connected ? (s.lag === 0 ? "In sync" : "Catching up") : (s.leader ? "Reconnecting" : "Standby");
-        $b.append($("<tr>").append($("<td>").text(s.stream), $("<td>").text(s.cursor), $("<td>").text(s.lag), $("<td>").text(state)));
+        var $dead = $("<td>").text(s.deadLetters);
+        if (s.deadLetters > 0) $dead.append(" ", $('<span class="pill overdue">Needs attention</span>'));
+        $b.append($("<tr>").append($("<td>").text(s.stream), $("<td>").text(s.cursor), $("<td>").text(s.lag), $dead, $("<td>").text(state)));
       });
     });
   }

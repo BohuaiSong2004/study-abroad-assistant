@@ -39,6 +39,9 @@ type Stack struct {
 	Apps     appsv1.ApplicationServiceClient
 	Recs     appsv1.RecommendationServiceClient
 	Timeline timelinev1.TimelineServiceClient
+	Admin    timelinev1.SyncAdminServiceClient
+	// TimelineStore is the timeline service's store (white-box tests).
+	TimelineStore *timeline.Store
 
 	AccountService *applications.AccountService
 	Syncer         *timeline.Syncer
@@ -101,9 +104,12 @@ func New(t testing.TB, cacheMode string) *Stack {
 	}
 	s.TimelineConn = testutil.Server(t, func(g *grpc.Server) {
 		timelinev1.RegisterTimelineServiceServer(g, timeline.NewService(tlStore, s.consumers, log))
+		timelinev1.RegisterSyncAdminServiceServer(g, timeline.NewAdminService(s.consumers, s.Syncer, log))
 		eventsv1.RegisterEventStreamServiceServer(g, events.NewServer(tlOB, log, events.ServerOptions{PollInterval: 50 * time.Millisecond}))
 	})
 	s.Timeline = timelinev1.NewTimelineServiceClient(s.TimelineConn)
+	s.Admin = timelinev1.NewSyncAdminServiceClient(s.TimelineConn)
+	s.TimelineStore = tlStore
 	s.StartConsumers()
 	t.Cleanup(s.StopConsumers)
 	return s

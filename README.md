@@ -127,11 +127,24 @@ low load; a burst of 100 students making 500 changes in ~10 s is fully synced
 with 0 errors (server-side p95 2.3 s); a deadline change re-plans **300
 timelines in ~2 s**.
 
+## Operations
+
+```bash
+# dev mode: go run ./cmd/waypointctl …   compose: docker compose run --rm ctl …
+waypointctl status                          # cursor, lag, leader, parked events per stream
+waypointctl dlq list                        # events that could not be applied, with the error
+waypointctl dlq replay timeline.applications 42
+waypointctl resync [-student usr_…]         # re-plan after a planner fix (writes only changed plans)
+```
+
+Every service also exposes `/metrics` (Prometheus), `/healthz` and
+`/readyz` on its admin port.
+
 ## Project layout
 
 ```
 proto/                 gRPC API definitions (buf)       gen/  generated Go code
-cmd/                   catalog, applications, timeline, gateway, seed
+cmd/                   catalog, applications, timeline, gateway, seed, waypointctl (ops CLI)
 internal/
   catalog/ applications/ timeline/   service implementations
   events/              outbox, Subscribe server, consumer, leases, watermark

@@ -91,3 +91,13 @@ services:
     depends_on:
       catalog: { condition: service_healthy }
     restart: "no"
+
+  # Operator CLI (not started by `up`):
+  #   docker compose run --rm ctl status
+  #   docker compose run --rm ctl dlq list
+  ctl:
+    build: { context: ., args: { SERVICE: waypointctl } }
+    environment:
+      <<: *env
+    profiles: [tools]
+    restart: "no"

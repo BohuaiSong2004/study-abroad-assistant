@@ -205,6 +205,56 @@ func (s *Store) PutProgram(ctx context.Context, p *catalogv1.Program) (bool, err
 	return err == nil, err
 }
 
+// Refs lists the (student, application) pairs of every timeline, or of one
+// student's, reading the table directly (operator use: Resync).
+func (s *Store) Refs(ctx context.Context, sid string) ([][2]string, error) {
+	var res [][2]string
+	add := func(items []map[string]types.AttributeValue) {
+		for _, it := range items {
+			res = append(res, [2]string{
+				strings.TrimPrefix(ddb.GetS(it, ddb.PK), "STUDENT#"),
+				strings.TrimPrefix(ddb.GetS(it, ddb.SK), "TL#"),
+			})
+		}
+	}
+	if sid != "" {
+		in := &dynamodb.QueryInput{
+			TableName: aws.String(s.table), ConsistentRead: aws.Bool(true),
+			KeyConditionExpression:    aws.String("pk = :pk AND begins_with(sk, :p)"),
+			ExpressionAttributeValues: map[string]types.AttributeValue{":pk": ddb.S("STUDENT#" + sid), ":p": ddb.S("TL#")},
+			ProjectionExpression:      aws.String("pk, sk"),
+		}
+		for {
+			out, err := s.raw.Query(ctx, in)
+			if err != nil {
+				return nil, err
+			}
+			add(out.Items)
+			if out.LastEvaluatedKey == nil {
+				return res, nil
+			}
+			in.ExclusiveStartKey = out.LastEvaluatedKey
+		}
+	}
+	in := &dynamodb.ScanInput{
+		TableName: aws.String(s.table), ConsistentRead: aws.Bool(true),
+		FilterExpression:          aws.String("begins_with(sk, :p)"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{":p": ddb.S("TL#")},
+		ProjectionExpression:      aws.String("pk, sk"),
+	}
+	for {
+		out, err := s.raw.Scan(ctx, in)
+		if err != nil {
+			return nil, err
+		}
+		add(out.Items)
+		if out.LastEvaluatedKey == nil {
+			return res, nil
+		}
+		in.ExclusiveStartKey = out.LastEvaluatedKey
+	}
+}
+
 // StaleForProgram lists (student, application) pairs whose timeline was
 // planned with a program version older than version. It reads the GSI with
 // the raw client: a cached result could hide a timeline created moments ago.

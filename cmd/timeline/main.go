@@ -41,7 +41,9 @@ func main() {
 	fromCatalog := consumer("timeline.catalog", "catalog", eventsv1.NewEventStreamServiceClient(catalogConn), syncer.HandleCatalog)
 	fromApps := consumer("timeline.applications", "applications", eventsv1.NewEventStreamServiceClient(appsConn), syncer.HandleApplications)
 
-	timelinev1.RegisterTimelineServiceServer(b.GRPC, timeline.NewService(store, []*events.Consumer{fromCatalog, fromApps}, b.Log))
+	consumers := []*events.Consumer{fromCatalog, fromApps}
+	timelinev1.RegisterSyncAdminServiceServer(b.GRPC, timeline.NewAdminService(consumers, syncer, b.Log))
+	timelinev1.RegisterTimelineServiceServer(b.GRPC, timeline.NewService(store, consumers, b.Log))
 	eventsv1.RegisterEventStreamServiceServer(b.GRPC, events.NewServer(ob, b.Log, events.ServerOptions{}))
 
 	run := func(c *events.Consumer) func(context.Context) error {

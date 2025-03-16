@@ -352,6 +352,12 @@ func (c *CachedAPI) Query(ctx context.Context, in *dynamodb.QueryInput, opts ...
 	return v.(*dynamodb.QueryOutput), nil
 }
 
+// Scan is never cached (operator tasks only).
+func (c *CachedAPI) Scan(ctx context.Context, in *dynamodb.ScanInput, opts ...func(*dynamodb.Options)) (*dynamodb.ScanOutput, error) {
+	cacheRequests.WithLabelValues("query", "bypass").Inc()
+	return c.next.Scan(ctx, in, opts...)
+}
+
 // --- writes (pass through, then invalidate) ------------------------------
 
 func (c *CachedAPI) PutItem(ctx context.Context, in *dynamodb.PutItemInput, opts ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error) {

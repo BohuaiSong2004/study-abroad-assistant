@@ -262,13 +262,20 @@ func (s *Service) DeleteMilestone(ctx context.Context, req *timelinev1.DeleteMil
 }
 
 // GetSyncStatus reports the consumers' progress.
-func (s *Service) GetSyncStatus(context.Context, *timelinev1.GetSyncStatusRequest) (*timelinev1.GetSyncStatusResponse, error) {
+func (s *Service) GetSyncStatus(ctx context.Context, _ *timelinev1.GetSyncStatusRequest) (*timelinev1.GetSyncStatusResponse, error) {
+	if _, err := platform.RequireRole(ctx, platform.RoleCounselor, platform.RoleService); err != nil {
+		return nil, err
+	}
 	out := &timelinev1.GetSyncStatusResponse{}
 	for _, c := range s.consumers {
 		st := c.Status()
+		dead, err := c.CountDeadLetters(ctx)
+		if err != nil {
+			return nil, s.mapErr(ctx, err)
+		}
 		ss := &timelinev1.StreamStatus{
 			Stream: st.Stream, Cursor: st.Cursor, HeadSeq: st.Head, Connected: st.Connected,
-			Leader: st.Leader, EventsApplied: st.Applied,
+			Leader: st.Leader, EventsApplied: st.Applied, DeadLetters: dead,
 		}
 		if !st.LastEventAt.IsZero() {
 			ss.LastEventAt = timestamppb.New(st.LastEventAt)

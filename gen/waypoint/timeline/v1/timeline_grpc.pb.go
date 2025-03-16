@@ -19,6 +19,198 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	SyncAdminService_ListDeadLetters_FullMethodName  = "/waypoint.timeline.v1.SyncAdminService/ListDeadLetters"
+	SyncAdminService_ReplayDeadLetter_FullMethodName = "/waypoint.timeline.v1.SyncAdminService/ReplayDeadLetter"
+	SyncAdminService_Resync_FullMethodName           = "/waypoint.timeline.v1.SyncAdminService/Resync"
+)
+
+// SyncAdminServiceClient is the client API for SyncAdminService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// SyncAdminService is the operator API for the timeline service's event
+// consumers (caller role "service", e.g. waypointctl): inspect and replay
+// dead letters, and re-plan timelines after a planner fix.
+type SyncAdminServiceClient interface {
+	ListDeadLetters(ctx context.Context, in *ListDeadLettersRequest, opts ...grpc.CallOption) (*ListDeadLettersResponse, error)
+	ReplayDeadLetter(ctx context.Context, in *ReplayDeadLetterRequest, opts ...grpc.CallOption) (*ReplayDeadLetterResponse, error)
+	// Resync re-plans timelines from their stored application snapshot and the
+	// current program, writing only those whose plan changes. Replaying the
+	// streams would not do this: the handlers skip events already applied.
+	Resync(ctx context.Context, in *ResyncRequest, opts ...grpc.CallOption) (*ResyncResponse, error)
+}
+
+type syncAdminServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewSyncAdminServiceClient(cc grpc.ClientConnInterface) SyncAdminServiceClient {
+	return &syncAdminServiceClient{cc}
+}
+
+func (c *syncAdminServiceClient) ListDeadLetters(ctx context.Context, in *ListDeadLettersRequest, opts ...grpc.CallOption) (*ListDeadLettersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListDeadLettersResponse)
+	err := c.cc.Invoke(ctx, SyncAdminService_ListDeadLetters_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *syncAdminServiceClient) ReplayDeadLetter(ctx context.Context, in *ReplayDeadLetterRequest, opts ...grpc.CallOption) (*ReplayDeadLetterResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReplayDeadLetterResponse)
+	err := c.cc.Invoke(ctx, SyncAdminService_ReplayDeadLetter_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *syncAdminServiceClient) Resync(ctx context.Context, in *ResyncRequest, opts ...grpc.CallOption) (*ResyncResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResyncResponse)
+	err := c.cc.Invoke(ctx, SyncAdminService_Resync_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// SyncAdminServiceServer is the server API for SyncAdminService service.
+// All implementations must embed UnimplementedSyncAdminServiceServer
+// for forward compatibility.
+//
+// SyncAdminService is the operator API for the timeline service's event
+// consumers (caller role "service", e.g. waypointctl): inspect and replay
+// dead letters, and re-plan timelines after a planner fix.
+type SyncAdminServiceServer interface {
+	ListDeadLetters(context.Context, *ListDeadLettersRequest) (*ListDeadLettersResponse, error)
+	ReplayDeadLetter(context.Context, *ReplayDeadLetterRequest) (*ReplayDeadLetterResponse, error)
+	// Resync re-plans timelines from their stored application snapshot and the
+	// current program, writing only those whose plan changes. Replaying the
+	// streams would not do this: the handlers skip events already applied.
+	Resync(context.Context, *ResyncRequest) (*ResyncResponse, error)
+	mustEmbedUnimplementedSyncAdminServiceServer()
+}
+
+// UnimplementedSyncAdminServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedSyncAdminServiceServer struct{}
+
+func (UnimplementedSyncAdminServiceServer) ListDeadLetters(context.Context, *ListDeadLettersRequest) (*ListDeadLettersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListDeadLetters not implemented")
+}
+func (UnimplementedSyncAdminServiceServer) ReplayDeadLetter(context.Context, *ReplayDeadLetterRequest) (*ReplayDeadLetterResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReplayDeadLetter not implemented")
+}
+func (UnimplementedSyncAdminServiceServer) Resync(context.Context, *ResyncRequest) (*ResyncResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Resync not implemented")
+}
+func (UnimplementedSyncAdminServiceServer) mustEmbedUnimplementedSyncAdminServiceServer() {}
+func (UnimplementedSyncAdminServiceServer) testEmbeddedByValue()                          {}
+
+// UnsafeSyncAdminServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to SyncAdminServiceServer will
+// result in compilation errors.
+type UnsafeSyncAdminServiceServer interface {
+	mustEmbedUnimplementedSyncAdminServiceServer()
+}
+
+func RegisterSyncAdminServiceServer(s grpc.ServiceRegistrar, srv SyncAdminServiceServer) {
+	// If the following call panics, it indicates UnimplementedSyncAdminServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&SyncAdminService_ServiceDesc, srv)
+}
+
+func _SyncAdminService_ListDeadLetters_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListDeadLettersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SyncAdminServiceServer).ListDeadLetters(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SyncAdminService_ListDeadLetters_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SyncAdminServiceServer).ListDeadLetters(ctx, req.(*ListDeadLettersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SyncAdminService_ReplayDeadLetter_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReplayDeadLetterRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SyncAdminServiceServer).ReplayDeadLetter(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SyncAdminService_ReplayDeadLetter_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SyncAdminServiceServer).ReplayDeadLetter(ctx, req.(*ReplayDeadLetterRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SyncAdminService_Resync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResyncRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SyncAdminServiceServer).Resync(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SyncAdminService_Resync_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SyncAdminServiceServer).Resync(ctx, req.(*ResyncRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// SyncAdminService_ServiceDesc is the grpc.ServiceDesc for SyncAdminService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var SyncAdminService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "waypoint.timeline.v1.SyncAdminService",
+	HandlerType: (*SyncAdminServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ListDeadLetters",
+			Handler:    _SyncAdminService_ListDeadLetters_Handler,
+		},
+		{
+			MethodName: "ReplayDeadLetter",
+			Handler:    _SyncAdminService_ReplayDeadLetter_Handler,
+		},
+		{
+			MethodName: "Resync",
+			Handler:    _SyncAdminService_Resync_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "waypoint/timeline/v1/timeline.proto",
+}
+
+const (
 	TimelineService_GetTimeline_FullMethodName     = "/waypoint.timeline.v1.TimelineService/GetTimeline"
 	TimelineService_ListTimelines_FullMethodName   = "/waypoint.timeline.v1.TimelineService/ListTimelines"
 	TimelineService_GetAgenda_FullMethodName       = "/waypoint.timeline.v1.TimelineService/GetAgenda"

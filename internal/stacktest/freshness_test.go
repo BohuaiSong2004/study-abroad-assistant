@@ -1,4 +1,4 @@
-package stacktest
+package stacktest_test
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 	timelinev1 "github.com/BohuaiSong2004/study-abroad-assistant/gen/waypoint/timeline/v1"
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/ddb"
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/platform"
+	. "github.com/BohuaiSong2004/study-abroad-assistant/internal/stacktest"
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/timeline"
 )
 

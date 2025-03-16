@@ -127,10 +127,11 @@ func (s *Server) syncStatus(w http.ResponseWriter, r *http.Request) {
 		Leader      bool   `json:"leader"`
 		Applied     int64  `json:"applied"`
 		LastEventAt string `json:"lastEventAt,omitempty"`
+		DeadLetters int64  `json:"deadLetters"`
 	}
 	out := []stream{}
 	for _, st := range res.Streams {
-		out = append(out, stream{st.Stream, st.Cursor, st.HeadSeq, max(st.HeadSeq-st.Cursor, 0), st.Connected, st.Leader, st.EventsApplied, ts(st.LastEventAt)})
+		out = append(out, stream{st.Stream, st.Cursor, st.HeadSeq, max(st.HeadSeq-st.Cursor, 0), st.Connected, st.Leader, st.EventsApplied, ts(st.LastEventAt), st.DeadLetters})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"streams": out})
 }

@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	appsv1 "github.com/BohuaiSong2004/study-abroad-assistant/gen/waypoint/applications/v1"
@@ -118,6 +120,57 @@ func (s *Syncer) replanProgram(ctx context.Context, p *catalogv1.Program) error 
 		s.log.Info("re-planned timelines after program change", "program_id", p.Id, "version", p.Version, "timelines", len(stale))
 	}
 	return nil
+}
+
+// Resync re-plans timelines (all, or one student's) from the application
+// snapshot each one stores and the current program, and writes only those
+// whose plan changes: the repair after a planner fix is deployed. It returns
+// how many timelines were examined and how many changed.
+func (s *Syncer) Resync(ctx context.Context, sid string) (int, int, error) {
+	refs, err := s.store.Refs(ctx, sid)
+	if err != nil {
+		return 0, 0, err
+	}
+	var changed atomic.Int64
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(s.ReplanParallelism)
+	for _, ref := range refs {
+		g.Go(func() error {
+			return s.upsert(gctx, ref[0], ref[1], func(prev *record) (*record, error) {
+				if prev == nil {
+					return nil, nil // deleted meanwhile
+				}
+				p, err := s.program(gctx, prev.tl.ProgramId)
+				if err != nil {
+					return nil, err
+				}
+				if p.Version < prev.tl.ProgramVersion {
+					return nil, nil // never plan with an older program
+				}
+				next := Plan(p, prev.app, prev.tl, s.now())
+				if samePlan(prev.tl, next) {
+					return nil, nil
+				}
+				changed.Add(1)
+				return &record{tl: next, app: prev.app}, nil
+			})
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return len(refs), int(changed.Load()), err
+	}
+	s.log.Info("resync finished", "timelines", len(refs), "replanned", changed.Load())
+	return len(refs), int(changed.Load()), nil
+}
+
+// samePlan compares two timelines ignoring the bookkeeping fields that every
+// write changes.
+func samePlan(a, b *timelinev1.Timeline) bool {
+	x, y := proto.Clone(a).(*timelinev1.Timeline), proto.Clone(b).(*timelinev1.Timeline)
+	for _, t := range []*timelinev1.Timeline{x, y} {
+		t.Version, t.UpdatedAt = 0, nil
+	}
+	return proto.Equal(x, y)
 }
 
 // HandleApplications applies an applications stream event.

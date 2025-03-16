@@ -95,6 +95,22 @@ Handlers are idempotent: a timeline records the application version and the
 program version it was planned from, and ignores events that do not carry a
 newer one. Replaying a whole stream from zero changes nothing (tested).
 
+### Operating the sync
+
+`SyncAdminService` (callers with the internal `service` role) and the
+`waypointctl` CLI cover the two repairs an operator needs:
+
+- **Dead letters.** `waypointctl dlq list` shows parked events with their
+  error; after fixing the cause (e.g. the referenced program now exists),
+  `waypointctl dlq replay CONSUMER SEQ` runs the handler again and removes the
+  item on success, or records the new error and keeps it. The counselor page
+  and `waypointctl status` show a parked-event count per stream.
+- **Planner fixes.** Rewinding a cursor would not help, because the handlers
+  skip events they already applied. `waypointctl resync [-student ID]`
+  re-plans each timeline from the application snapshot it stores and the
+  current program, and writes only the ones whose plan changes (students'
+  own milestones are kept).
+
 ### Cross-stream ordering
 
 The catalog and applications streams are independent, so:
