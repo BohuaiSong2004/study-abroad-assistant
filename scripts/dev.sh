@@ -14,6 +14,9 @@ export CACHE_MODE="${CACHE_MODE:-local}"
 export INTERNAL_TOKEN="${INTERNAL_TOKEN:-dev-internal-token-change-me}"
 export LOG_FORMAT="${LOG_FORMAT:-text}"
 export CATALOG_ADDR=dns:///localhost:9091 APPLICATIONS_ADDR=dns:///localhost:9092 TIMELINE_ADDR=dns:///localhost:9093
+# The limiter stays on in development; the threshold is raised so the e2e
+# suite (many sign-ups from one IP) runs without 429s.
+export AUTH_RATE_PER_MIN="${AUTH_RATE_PER_MIN:-300}"
 export BOOTSTRAP_COUNSELOR_EMAIL="${BOOTSTRAP_COUNSELOR_EMAIL:-counselor@example.com}"
 export BOOTSTRAP_COUNSELOR_PASSWORD="${BOOTSTRAP_COUNSELOR_PASSWORD:-counselor-demo-password}"
 
