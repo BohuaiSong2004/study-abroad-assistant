@@ -155,3 +155,15 @@ live update reporting the same deletion arrives within milliseconds and
 navigates too; the second navigation aborts the first. Users never noticed
 (they land on the dashboard either way), but it was a real race. The page now
 navigates once; the test passed 10 of 10 repeated runs afterwards.
+
+## 12. A lockout split across a fixed-window boundary
+
+The first version of the shared limits used fixed 15-minute windows. The
+lockout browser test passed locally and failed in CI: the run started at
+07:00:12, and the ten failed sign-ins had straddled 07:00, six in one window
+and four in the next, so neither reached ten. An attacker gets the same gift
+(up to 2N-1 attempts across a boundary). The limits now use a sliding
+estimate (current count plus the previous window's count weighted by its
+remaining overlap), and `Retry-After` is computed from when the estimate
+falls under the limit. `TestLockoutHoldsAcrossAWindowBoundary` reproduces
+the split.

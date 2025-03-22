@@ -75,7 +75,9 @@ func TestRepeatedFailedSignInsLockTheAccountAcrossReplicas(t *testing.T) {
 	}
 	// ...even for the right password, on either replica.
 	err := login(b, ctx, "lock@example.com", "correct horse battery")
-	if d := retryAfter(t, err); d <= 0 || d > 15*time.Minute {
+	// 3 failures at the start of a window: the sliding estimate stays at the
+	// limit until a third of the way into the next window (10:20).
+	if d := retryAfter(t, err); d < 19*time.Minute || d > 20*time.Minute {
 		t.Fatalf("retry delay %v", d)
 	}
 	// Unknown emails lock the same way, so lockout reveals nothing about
@@ -84,10 +86,57 @@ func TestRepeatedFailedSignInsLockTheAccountAcrossReplicas(t *testing.T) {
 		_ = login(a, ctx, "nobody@example.com", "whatever password")
 	}
 	retryAfter(t, login(a, ctx, "nobody@example.com", "whatever password"))
-	// The next window lets the owner back in.
+	// The window slides: just after the boundary the three failures still
+	// count almost fully; a third of the way into the next window the
+	// estimate (3 x 2/3 = 2) is under the limit again, as Retry-After said.
 	clk.t = clk.t.Add(15 * time.Minute)
+	d := retryAfter(t, login(a, ctx, "lock@example.com", "correct horse battery"))
+	if d < 4*time.Minute || d > 6*time.Minute {
+		t.Fatalf("retry after the boundary: %v, want about 5 minutes", d)
+	}
+	clk.t = clk.t.Add(d)
 	if err := login(a, ctx, "lock@example.com", "correct horse battery"); err != nil {
-		t.Fatalf("after the window: %v", err)
+		t.Fatalf("after Retry-After: %v", err)
+	}
+}
+
+// The CI failure that motivated the sliding window: failures split across a
+// fixed-window boundary never added up to a lockout.
+func TestLockoutHoldsAcrossAWindowBoundary(t *testing.T) {
+	a, _, clk := newLimited(t, Limits{FailuresPerEmail: Limit{4, 15 * time.Minute}})
+	ctx := context.Background()
+	clk.t = time.Date(2026, 11, 22, 10, 14, 55, 0, time.UTC)
+	for i := 0; i < 2; i++ {
+		_ = login(a, ctx, "edge@example.com", "wrong password")
+	}
+	clk.t = clk.t.Add(10 * time.Second) // 10:15:05, next fixed window
+	for i := 0; i < 2; i++ {
+		_ = login(a, ctx, "edge@example.com", "wrong password")
+	}
+	retryAfter(t, login(a, ctx, "edge@example.com", "wrong password"))
+}
+
+func TestSlidingEstimateAndRecovery(t *testing.T) {
+	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	u := usage{cur: 2, prev: 6, start: start, window: 10 * time.Minute, now: start.Add(5 * time.Minute)}
+	if e := u.estimate(); e != 5 {
+		t.Fatalf("estimate %v, want 2 + 6/2", e)
+	}
+	if !u.atLeast(5) || u.atLeast(6) {
+		t.Fatal("atLeast")
+	}
+	// 2 + 6(1-f) <= 3  =>  f >= 5/6.
+	if got, want := u.until(3), start.Add(500*time.Second); !got.Equal(want) {
+		t.Fatalf("until(3) = %v, want %v", got, want)
+	}
+	// Current window alone over the target: wait into the next window,
+	// 4(1-f) <= 2  =>  f >= 1/2.
+	u = usage{cur: 4, start: start, window: 10 * time.Minute, now: start.Add(time.Minute)}
+	if got, want := u.until(2), start.Add(15*time.Minute); !got.Equal(want) {
+		t.Fatalf("until(2) = %v, want %v", got, want)
+	}
+	if got := (usage{cur: 1, start: start, window: time.Minute, now: start}).until(3); !got.Equal(start) {
+		t.Fatalf("already under: %v", got)
 	}
 }
 

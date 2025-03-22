@@ -149,13 +149,13 @@ func (s *AccountService) create(ctx context.Context, email, password, name strin
 // Register creates a student account.
 func (s *AccountService) Register(ctx context.Context, req *appsv1.RegisterRequest) (*appsv1.Account, error) {
 	if ip := platform.ClientIP(ctx); ip != "" && s.limits.RegisterPerIP.N > 0 {
-		n, until, err := s.rl.hit(ctx, "register-ip", ip, s.limits.RegisterPerIP)
+		u, err := s.rl.hit(ctx, "register-ip", ip, s.limits.RegisterPerIP)
 		if err != nil {
 			return nil, platform.InternalError(ctx, s.log, "rate limit", err)
 		}
-		if n > s.limits.RegisterPerIP.N {
+		if n := s.limits.RegisterPerIP.N; u.atLeast(n + 1) {
 			s.log.WarnContext(ctx, "sign-up rate limit reached")
-			return nil, limited("Too many accounts were created from your network.", until, s.now())
+			return nil, limited("Too many accounts were created from your network.", u.until(n-1), u.now)
 		}
 	}
 	a, err := s.create(ctx, req.GetEmail(), req.GetPassword(), req.GetDisplayName(), appsv1.Role_ROLE_STUDENT)
@@ -224,22 +224,22 @@ func (s *AccountService) Authenticate(ctx context.Context, req *appsv1.Authentic
 // probed further even with the right password.
 func (s *AccountService) checkLoginLimits(ctx context.Context, email string) error {
 	if ip := platform.ClientIP(ctx); ip != "" && s.limits.LoginPerIP.N > 0 {
-		n, until, err := s.rl.hit(ctx, "login-ip", ip, s.limits.LoginPerIP)
+		u, err := s.rl.hit(ctx, "login-ip", ip, s.limits.LoginPerIP)
 		if err != nil {
 			return platform.InternalError(ctx, s.log, "rate limit", err)
 		}
-		if n > s.limits.LoginPerIP.N {
+		if n := s.limits.LoginPerIP.N; u.atLeast(n + 1) {
 			s.log.WarnContext(ctx, "sign-in rate limit reached for an address")
-			return limited("Too many sign-in attempts from your network.", until, s.now())
+			return limited("Too many sign-in attempts from your network.", u.until(n-1), u.now)
 		}
 	}
 	if s.limits.FailuresPerEmail.N > 0 {
-		n, until, err := s.rl.count(ctx, "login-fail", email, s.limits.FailuresPerEmail)
+		u, err := s.rl.count(ctx, "login-fail", email, s.limits.FailuresPerEmail)
 		if err != nil {
 			return platform.InternalError(ctx, s.log, "rate limit", err)
 		}
-		if n >= s.limits.FailuresPerEmail.N {
-			return limited("Too many failed sign-ins for this account.", until, s.now())
+		if n := s.limits.FailuresPerEmail.N; u.atLeast(n) {
+			return limited("Too many failed sign-ins for this account.", u.until(n-1), u.now)
 		}
 	}
 	return nil
@@ -249,12 +249,12 @@ func (s *AccountService) loginFailed(ctx context.Context, email string) {
 	if s.limits.FailuresPerEmail.N <= 0 {
 		return
 	}
-	n, _, err := s.rl.hit(ctx, "login-fail", email, s.limits.FailuresPerEmail)
+	u, err := s.rl.hit(ctx, "login-fail", email, s.limits.FailuresPerEmail)
 	if err != nil {
 		s.log.WarnContext(ctx, "count sign-in failure", "error", err)
 		return
 	}
-	if n == s.limits.FailuresPerEmail.N {
+	if n := s.limits.FailuresPerEmail.N; u.atLeast(n) && !(usage{cur: u.cur - 1, prev: u.prev, start: u.start, window: u.window, now: u.now}).atLeast(n) {
 		s.log.WarnContext(ctx, "account locked after repeated failed sign-ins")
 	}
 }

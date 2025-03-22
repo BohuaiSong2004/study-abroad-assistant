@@ -195,8 +195,8 @@ a student returning to the dashboard after creating an application saw
 - Rate limits in two layers. The gateway keeps an in-memory token bucket per
   client IP on sign-in, sign-up and invitation endpoints; it is cheap and
   protects one replica's CPU from argon2 floods. The authoritative limits are
-  shared across replicas in DynamoDB (fixed windows, `ADD` counters with a
-  TTL, hashed keys) in the applications service: sign-ins and sign-ups per
+  shared across replicas in DynamoDB (sliding-window estimate over two
+  fixed-window `ADD` counters with a TTL, hashed keys) in the applications service: sign-ins and sign-ups per
   address, and a **per-account lockout** after repeated failed sign-ins,
   which per-address limits cannot give against a distributed guessing
   attack. The lockout is counted for unknown emails too (no enumeration) and
