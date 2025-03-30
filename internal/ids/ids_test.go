@@ -37,7 +37,7 @@ func TestIDsAreUniqueSortableAndValidated(t *testing.T) {
 			t.Errorf("Valid(%q)", bad)
 		}
 	}
-	if len(Token()) < 50 || Token() == Token() {
+	if a, b := Token(), Token(); len(a) < 50 || a == b {
 		t.Fatal("token")
 	}
 }

@@ -20,8 +20,7 @@ import (
 func main() {
 	b, err := svc.New("applications", ddb.TableApplications)
 	if err != nil {
-		os.Stderr.WriteString("applications: " + err.Error() + "\n")
-		os.Exit(1)
+		svc.Fatal("applications", err)
 	}
 	table := b.Table(ddb.TableApplications)
 	cc := platform.MustDial(platform.Env("CATALOG_ADDR", "dns:///localhost:9091"), b.Token)

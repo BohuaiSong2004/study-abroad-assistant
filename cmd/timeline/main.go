@@ -4,7 +4,6 @@ package main
 
 import (
 	"context"
-	"os"
 
 	catalogv1 "github.com/BohuaiSong2004/study-abroad-assistant/gen/waypoint/catalog/v1"
 	eventsv1 "github.com/BohuaiSong2004/study-abroad-assistant/gen/waypoint/events/v1"
@@ -19,8 +18,7 @@ import (
 func main() {
 	b, err := svc.New("timeline", ddb.TableTimeline)
 	if err != nil {
-		os.Stderr.WriteString("timeline: " + err.Error() + "\n")
-		os.Exit(1)
+		svc.Fatal("timeline", err)
 	}
 	table := b.Table(ddb.TableTimeline)
 	catalogConn := platform.MustDial(platform.Env("CATALOG_ADDR", "dns:///localhost:9091"), b.Token)

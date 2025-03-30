@@ -125,6 +125,9 @@ func TestStudentWorkspaceEndpoints(t *testing.T) {
 	c.expect(400, "POST", "/api/applications/"+id+"/milestones", map[string]any{"title": "", "dueDate": "2026-12-05"})
 	c.expect(400, "POST", "/api/applications/"+id+"/milestones", map[string]any{"title": "x", "dueDate": "12/05/2026"})
 	tl = c.expect(200, "PATCH", "/api/applications/"+id+"/milestones/"+custom, map[string]any{"done": true, "title": "Book IELTS (done)"})
+	if !strings.Contains(tl["milestones"].([]any)[0].(map[string]any)["title"].(string)+fmtMilestones(tl), "Book IELTS (done)") {
+		t.Fatalf("custom milestone not updated: %v", tl)
+	}
 	c.expect(404, "PATCH", "/api/applications/"+id+"/milestones/c:missing", map[string]any{"done": true})
 	c.expect(200, "DELETE", "/api/applications/"+id+"/milestones/"+custom, nil)
 
@@ -175,4 +178,13 @@ func toStrings(v any) []string {
 		out = append(out, x.(string))
 	}
 	return out
+}
+
+func fmtMilestones(tl map[string]any) string {
+	var b strings.Builder
+	for _, m := range tl["milestones"].([]any) {
+		b.WriteString(m.(map[string]any)["title"].(string))
+		b.WriteString("|")
+	}
+	return b.String()
 }

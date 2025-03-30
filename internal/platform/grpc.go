@@ -108,7 +108,7 @@ func NewGRPCServer(log *slog.Logger, internalToken string) *GRPCServer {
 
 // Serve listens on addr until ctx is cancelled, then drains gracefully.
 func (s *GRPCServer) Serve(ctx context.Context, addr string) error {
-	lis, err := net.Listen("tcp", addr)
+	lis, err := (&net.ListenConfig{}).Listen(ctx, "tcp", addr)
 	if err != nil {
 		return err
 	}

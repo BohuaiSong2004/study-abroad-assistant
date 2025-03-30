@@ -135,7 +135,7 @@ func (c *Consumer) Run(ctx context.Context) error {
 			return c.loop(lctx)
 		})
 		if ctx.Err() != nil {
-			return nil
+			return nil //nolint:nilerr // shutting down
 		}
 		if err != nil {
 			c.log.Warn("lease lost", "error", err)
@@ -150,14 +150,14 @@ func (c *Consumer) loop(ctx context.Context) error {
 		consumerConnected.WithLabelValues(c.name).Set(0)
 		c.update(func(s *Status) { s.Connected = false })
 		if ctx.Err() != nil {
-			return nil
+			return nil //nolint:nilerr // shutting down: the stream error is expected
 		}
 		if healthy {
 			// The stream worked; this is a fresh failure, not a retry storm.
 			backoff = 100 * time.Millisecond
 		}
 		c.log.Warn("event stream disconnected; reconnecting", "error", err, "backoff", backoff)
-		sleep := backoff/2 + time.Duration(rand.Int64N(int64(backoff)))
+		sleep := backoff/2 + time.Duration(rand.Int64N(int64(backoff))) //nolint:gosec // jitter, not a secret
 		select {
 		case <-ctx.Done():
 			return nil

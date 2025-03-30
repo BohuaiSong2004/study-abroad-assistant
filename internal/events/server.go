@@ -95,7 +95,7 @@ func (s *Server) Subscribe(req *eventsv1.SubscribeRequest, st eventsv1.EventStre
 		evs, err := s.ob.read(ctx, next, s.opts.PageSize)
 		if err != nil {
 			if ctx.Err() != nil {
-				return nil
+				return nil //nolint:nilerr // subscriber went away
 			}
 			return status.Error(codes.Unavailable, "read outbox: "+err.Error())
 		}

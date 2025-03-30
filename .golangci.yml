@@ -1,0 +1,40 @@
+version: "2"
+run:
+  timeout: 5m
+linters:
+  enable:
+    - bodyclose
+    - errorlint
+    - gosec
+    - misspell
+    - nilerr
+    - noctx
+    - revive
+    - unconvert
+    - unparam
+  settings:
+    gosec:
+      excludes:
+        - G104 # unhandled errors: errcheck covers this with explicit exclusions
+        - G115 # integer conversions are bounded by validation (proto enums, page sizes)
+    revive:
+      rules:
+        - name: exported
+          disabled: true # internal packages; doc comments where they matter
+        - name: package-comments
+          disabled: true
+  exclusions:
+    generated: strict
+    paths:
+      - gen/
+    rules:
+      - path: _test\.go
+        linters: [gosec, noctx, bodyclose, unparam, errorlint, errcheck]
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/BohuaiSong2004/study-abroad-assistant

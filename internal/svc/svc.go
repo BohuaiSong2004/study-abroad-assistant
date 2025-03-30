@@ -14,7 +14,7 @@ import (
 )
 
 // DevInternalToken is used when INTERNAL_TOKEN is unset outside production.
-const DevInternalToken = "dev-internal-token-change-me"
+const DevInternalToken = "dev-internal-token-change-me" //nolint:gosec // documented development default; refused when ENVIRONMENT=production
 
 // Base holds what every service needs.
 type Base struct {
@@ -40,6 +40,12 @@ func InternalToken(log *slog.Logger) string {
 		t = DevInternalToken
 	}
 	return t
+}
+
+// Fatal reports a startup error and exits.
+func Fatal(name string, err error) {
+	_, _ = fmt.Fprintf(os.Stderr, "%s: %v\n", name, err)
+	os.Exit(1)
 }
 
 // New connects to DynamoDB (creating tables when AUTO_CREATE_TABLES=true)

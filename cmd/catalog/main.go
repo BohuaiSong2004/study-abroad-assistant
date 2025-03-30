@@ -2,8 +2,6 @@
 package main
 
 import (
-	"os"
-
 	catalogv1 "github.com/BohuaiSong2004/study-abroad-assistant/gen/waypoint/catalog/v1"
 	eventsv1 "github.com/BohuaiSong2004/study-abroad-assistant/gen/waypoint/events/v1"
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/catalog"
@@ -15,8 +13,7 @@ import (
 func main() {
 	b, err := svc.New("catalog", ddb.TableCatalog)
 	if err != nil {
-		os.Stderr.WriteString("catalog: " + err.Error() + "\n")
-		os.Exit(1)
+		svc.Fatal("catalog", err)
 	}
 	table := b.Table(ddb.TableCatalog)
 	ob := events.NewOutbox(b.DB.API, table, "catalog", b.Log)

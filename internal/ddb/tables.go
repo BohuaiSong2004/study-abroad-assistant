@@ -74,7 +74,8 @@ func EnsureTables(ctx context.Context, raw *dynamodb.Client, prefix string, name
 		})
 		// Enabling TTL twice is a ValidationException; that is fine.
 		var ve interface{ ErrorCode() string }
-		if err != nil && !(errors.As(err, &ve) && ve.ErrorCode() == "ValidationException") {
+		alreadyEnabled := errors.As(err, &ve) && ve.ErrorCode() == "ValidationException"
+		if err != nil && !alreadyEnabled {
 			return fmt.Errorf("enable ttl on %s: %w", full, err)
 		}
 	}

@@ -68,7 +68,9 @@ func (s *Server) getSession(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) setSessionCookie(w http.ResponseWriter, token string, exp time.Time) {
-	http.SetCookie(w, &http.Cookie{
+	// Secure follows PUBLIC_URL's scheme (on for https); plain-http local
+	// development needs it off. HttpOnly and SameSite are always set.
+	http.SetCookie(w, &http.Cookie{ //nolint:gosec // see above
 		Name: sessionCookie, Value: token, Path: "/", HttpOnly: true, Secure: s.cfg.CookieSecure,
 		SameSite: http.SameSiteLaxMode, Expires: exp, MaxAge: int(time.Until(exp).Seconds()),
 	})
@@ -174,7 +176,9 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: "", Path: "/", HttpOnly: true, Secure: s.cfg.CookieSecure, SameSite: http.SameSiteLaxMode, MaxAge: -1})
+	// Expire the cookie; Secure follows PUBLIC_URL like when it was set.
+	expired := &http.Cookie{Name: sessionCookie, Value: "", Path: "/", HttpOnly: true, Secure: s.cfg.CookieSecure, SameSite: http.SameSiteLaxMode, MaxAge: -1} //nolint:gosec // see above
+	http.SetCookie(w, expired)
 	mt, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if mt == "application/x-www-form-urlencoded" {
 		http.Redirect(w, r, "/", http.StatusSeeOther)

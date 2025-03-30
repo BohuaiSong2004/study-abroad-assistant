@@ -59,8 +59,11 @@ func (s *Syncer) HandleCatalog(ctx context.Context, ev *eventsv1.Event) error {
 		return nil // unknown types are ignored for forward compatibility
 	}
 	var pu catalogv1.ProgramUpserted
-	if err := ev.Payload.UnmarshalTo(&pu); err != nil || pu.Program == nil {
-		return events.Permanent(fmt.Errorf("decode ProgramUpserted: %v", err))
+	if err := ev.Payload.UnmarshalTo(&pu); err != nil {
+		return events.Permanent(fmt.Errorf("decode ProgramUpserted: %w", err))
+	}
+	if pu.Program == nil {
+		return events.Permanent(errors.New("ProgramUpserted without a program"))
 	}
 	p := pu.Program
 	if _, err := s.store.PutProgram(ctx, p); err != nil {
@@ -113,8 +116,11 @@ func (s *Syncer) HandleApplications(ctx context.Context, ev *eventsv1.Event) err
 	switch ev.Type {
 	case applications.EventApplicationUpserted:
 		var au appsv1.ApplicationUpserted
-		if err := ev.Payload.UnmarshalTo(&au); err != nil || au.Application == nil {
-			return events.Permanent(fmt.Errorf("decode ApplicationUpserted: %v", err))
+		if err := ev.Payload.UnmarshalTo(&au); err != nil {
+			return events.Permanent(fmt.Errorf("decode ApplicationUpserted: %w", err))
+		}
+		if au.Application == nil {
+			return events.Permanent(errors.New("ApplicationUpserted without an application"))
 		}
 		return s.applyApplication(ctx, au.Application)
 	case applications.EventApplicationDeleted:

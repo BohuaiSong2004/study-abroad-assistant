@@ -22,7 +22,7 @@ func (s *Server) listPrograms(w http.ResponseWriter, r *http.Request) {
 		bad(w, "unknown degree")
 		return
 	}
-	size, _ := strconv.Atoi(q.Get("pageSize"))
+	size, _ := strconv.ParseInt(q.Get("pageSize"), 10, 32)
 	ctx, cancel := s.backend(r)
 	defer cancel()
 	res, err := s.c.Catalog.ListPrograms(ctx, &catalogv1.ListProgramsRequest{

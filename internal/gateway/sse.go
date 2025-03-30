@@ -59,7 +59,7 @@ func (h *Hub) Run(ctx context.Context) error {
 		first = false
 		h.setReady(false)
 		if ctx.Err() != nil {
-			return nil
+			return nil //nolint:nilerr // shutting down
 		}
 		if healthy {
 			backoff = 200 * time.Millisecond
@@ -68,7 +68,7 @@ func (h *Hub) Run(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-time.After(backoff/2 + time.Duration(rand.Int64N(int64(backoff)))):
+		case <-time.After(backoff/2 + time.Duration(rand.Int64N(int64(backoff)))): //nolint:gosec // jitter
 		}
 		backoff = min(backoff*2, 10*time.Second)
 	}
