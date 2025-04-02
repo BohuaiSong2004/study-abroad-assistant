@@ -1605,7 +1605,11 @@ type RequestRecommendationResponse struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Recommendation *Recommendation        `protobuf:"bytes,1,opt,name=recommendation,proto3" json:"recommendation,omitempty"`
 	// Raw invitation token; returned exactly once, only its hash is stored.
-	Token         string `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
+	Token string `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
+	// True if the invitation was emailed to the recommender. False when email
+	// is not configured, delivery failed or the student's daily email limit is
+	// reached; the student can still share the link.
+	EmailSent     bool `protobuf:"varint,3,opt,name=email_sent,json=emailSent,proto3" json:"email_sent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1654,6 +1658,181 @@ func (x *RequestRecommendationResponse) GetToken() string {
 	return ""
 }
 
+func (x *RequestRecommendationResponse) GetEmailSent() bool {
+	if x != nil {
+		return x.EmailSent
+	}
+	return false
+}
+
+type RequestPasswordResetRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestPasswordResetRequest) Reset() {
+	*x = RequestPasswordResetRequest{}
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestPasswordResetRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestPasswordResetRequest) ProtoMessage() {}
+
+func (x *RequestPasswordResetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestPasswordResetRequest.ProtoReflect.Descriptor instead.
+func (*RequestPasswordResetRequest) Descriptor() ([]byte, []int) {
+	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *RequestPasswordResetRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+type RequestPasswordResetResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestPasswordResetResponse) Reset() {
+	*x = RequestPasswordResetResponse{}
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestPasswordResetResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestPasswordResetResponse) ProtoMessage() {}
+
+func (x *RequestPasswordResetResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestPasswordResetResponse.ProtoReflect.Descriptor instead.
+func (*RequestPasswordResetResponse) Descriptor() ([]byte, []int) {
+	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{25}
+}
+
+type ResetPasswordRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	NewPassword   string                 `protobuf:"bytes,2,opt,name=new_password,json=newPassword,proto3" json:"new_password,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResetPasswordRequest) Reset() {
+	*x = ResetPasswordRequest{}
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResetPasswordRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResetPasswordRequest) ProtoMessage() {}
+
+func (x *ResetPasswordRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResetPasswordRequest.ProtoReflect.Descriptor instead.
+func (*ResetPasswordRequest) Descriptor() ([]byte, []int) {
+	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *ResetPasswordRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *ResetPasswordRequest) GetNewPassword() string {
+	if x != nil {
+		return x.NewPassword
+	}
+	return ""
+}
+
+type ResetPasswordResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResetPasswordResponse) Reset() {
+	*x = ResetPasswordResponse{}
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResetPasswordResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResetPasswordResponse) ProtoMessage() {}
+
+func (x *ResetPasswordResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResetPasswordResponse.ProtoReflect.Descriptor instead.
+func (*ResetPasswordResponse) Descriptor() ([]byte, []int) {
+	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{27}
+}
+
 type ListRecommendationsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ApplicationId string                 `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
@@ -1663,7 +1842,7 @@ type ListRecommendationsRequest struct {
 
 func (x *ListRecommendationsRequest) Reset() {
 	*x = ListRecommendationsRequest{}
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[24]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1675,7 +1854,7 @@ func (x *ListRecommendationsRequest) String() string {
 func (*ListRecommendationsRequest) ProtoMessage() {}
 
 func (x *ListRecommendationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[24]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1688,7 +1867,7 @@ func (x *ListRecommendationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRecommendationsRequest.ProtoReflect.Descriptor instead.
 func (*ListRecommendationsRequest) Descriptor() ([]byte, []int) {
-	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{24}
+	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ListRecommendationsRequest) GetApplicationId() string {
@@ -1707,7 +1886,7 @@ type ListRecommendationsResponse struct {
 
 func (x *ListRecommendationsResponse) Reset() {
 	*x = ListRecommendationsResponse{}
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[25]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1719,7 +1898,7 @@ func (x *ListRecommendationsResponse) String() string {
 func (*ListRecommendationsResponse) ProtoMessage() {}
 
 func (x *ListRecommendationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[25]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1732,7 +1911,7 @@ func (x *ListRecommendationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRecommendationsResponse.ProtoReflect.Descriptor instead.
 func (*ListRecommendationsResponse) Descriptor() ([]byte, []int) {
-	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{25}
+	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *ListRecommendationsResponse) GetRecommendations() []*Recommendation {
@@ -1752,7 +1931,7 @@ type CancelRecommendationRequest struct {
 
 func (x *CancelRecommendationRequest) Reset() {
 	*x = CancelRecommendationRequest{}
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[26]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1764,7 +1943,7 @@ func (x *CancelRecommendationRequest) String() string {
 func (*CancelRecommendationRequest) ProtoMessage() {}
 
 func (x *CancelRecommendationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[26]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1777,7 +1956,7 @@ func (x *CancelRecommendationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelRecommendationRequest.ProtoReflect.Descriptor instead.
 func (*CancelRecommendationRequest) Descriptor() ([]byte, []int) {
-	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{26}
+	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *CancelRecommendationRequest) GetApplicationId() string {
@@ -1804,7 +1983,7 @@ type RegenerateRecommendationLinkRequest struct {
 
 func (x *RegenerateRecommendationLinkRequest) Reset() {
 	*x = RegenerateRecommendationLinkRequest{}
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[27]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1816,7 +1995,7 @@ func (x *RegenerateRecommendationLinkRequest) String() string {
 func (*RegenerateRecommendationLinkRequest) ProtoMessage() {}
 
 func (x *RegenerateRecommendationLinkRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[27]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1829,7 +2008,7 @@ func (x *RegenerateRecommendationLinkRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use RegenerateRecommendationLinkRequest.ProtoReflect.Descriptor instead.
 func (*RegenerateRecommendationLinkRequest) Descriptor() ([]byte, []int) {
-	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{27}
+	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *RegenerateRecommendationLinkRequest) GetApplicationId() string {
@@ -1867,7 +2046,7 @@ type RecommendationInvite struct {
 
 func (x *RecommendationInvite) Reset() {
 	*x = RecommendationInvite{}
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[28]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1879,7 +2058,7 @@ func (x *RecommendationInvite) String() string {
 func (*RecommendationInvite) ProtoMessage() {}
 
 func (x *RecommendationInvite) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[28]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1892,7 +2071,7 @@ func (x *RecommendationInvite) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecommendationInvite.ProtoReflect.Descriptor instead.
 func (*RecommendationInvite) Descriptor() ([]byte, []int) {
-	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{28}
+	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *RecommendationInvite) GetRecommendationId() string {
@@ -1981,7 +2160,7 @@ type GetRecommendationInviteRequest struct {
 
 func (x *GetRecommendationInviteRequest) Reset() {
 	*x = GetRecommendationInviteRequest{}
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[29]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1993,7 +2172,7 @@ func (x *GetRecommendationInviteRequest) String() string {
 func (*GetRecommendationInviteRequest) ProtoMessage() {}
 
 func (x *GetRecommendationInviteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[29]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2006,7 +2185,7 @@ func (x *GetRecommendationInviteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRecommendationInviteRequest.ProtoReflect.Descriptor instead.
 func (*GetRecommendationInviteRequest) Descriptor() ([]byte, []int) {
-	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{29}
+	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *GetRecommendationInviteRequest) GetToken() string {
@@ -2026,7 +2205,7 @@ type SubmitRecommendationRequest struct {
 
 func (x *SubmitRecommendationRequest) Reset() {
 	*x = SubmitRecommendationRequest{}
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[30]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2038,7 +2217,7 @@ func (x *SubmitRecommendationRequest) String() string {
 func (*SubmitRecommendationRequest) ProtoMessage() {}
 
 func (x *SubmitRecommendationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[30]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2051,7 +2230,7 @@ func (x *SubmitRecommendationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitRecommendationRequest.ProtoReflect.Descriptor instead.
 func (*SubmitRecommendationRequest) Descriptor() ([]byte, []int) {
-	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{30}
+	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *SubmitRecommendationRequest) GetToken() string {
@@ -2078,7 +2257,7 @@ type DeclineRecommendationRequest struct {
 
 func (x *DeclineRecommendationRequest) Reset() {
 	*x = DeclineRecommendationRequest{}
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[31]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2090,7 +2269,7 @@ func (x *DeclineRecommendationRequest) String() string {
 func (*DeclineRecommendationRequest) ProtoMessage() {}
 
 func (x *DeclineRecommendationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[31]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2103,7 +2282,7 @@ func (x *DeclineRecommendationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeclineRecommendationRequest.ProtoReflect.Descriptor instead.
 func (*DeclineRecommendationRequest) Descriptor() ([]byte, []int) {
-	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{31}
+	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *DeclineRecommendationRequest) GetToken() string {
@@ -2129,7 +2308,7 @@ type GetRecommendationPacketRequest struct {
 
 func (x *GetRecommendationPacketRequest) Reset() {
 	*x = GetRecommendationPacketRequest{}
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[32]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2141,7 +2320,7 @@ func (x *GetRecommendationPacketRequest) String() string {
 func (*GetRecommendationPacketRequest) ProtoMessage() {}
 
 func (x *GetRecommendationPacketRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[32]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2154,7 +2333,7 @@ func (x *GetRecommendationPacketRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRecommendationPacketRequest.ProtoReflect.Descriptor instead.
 func (*GetRecommendationPacketRequest) Descriptor() ([]byte, []int) {
-	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{32}
+	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *GetRecommendationPacketRequest) GetApplicationId() string {
@@ -2177,7 +2356,7 @@ type RecommendationPacket struct {
 
 func (x *RecommendationPacket) Reset() {
 	*x = RecommendationPacket{}
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[33]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2189,7 +2368,7 @@ func (x *RecommendationPacket) String() string {
 func (*RecommendationPacket) ProtoMessage() {}
 
 func (x *RecommendationPacket) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[33]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2202,7 +2381,7 @@ func (x *RecommendationPacket) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecommendationPacket.ProtoReflect.Descriptor instead.
 func (*RecommendationPacket) Descriptor() ([]byte, []int) {
-	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{33}
+	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *RecommendationPacket) GetApplication() *Application {
@@ -2249,7 +2428,7 @@ type ApplicationUpserted struct {
 
 func (x *ApplicationUpserted) Reset() {
 	*x = ApplicationUpserted{}
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[34]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2261,7 +2440,7 @@ func (x *ApplicationUpserted) String() string {
 func (*ApplicationUpserted) ProtoMessage() {}
 
 func (x *ApplicationUpserted) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[34]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2274,7 +2453,7 @@ func (x *ApplicationUpserted) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApplicationUpserted.ProtoReflect.Descriptor instead.
 func (*ApplicationUpserted) Descriptor() ([]byte, []int) {
-	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{34}
+	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *ApplicationUpserted) GetApplication() *Application {
@@ -2295,7 +2474,7 @@ type ApplicationDeleted struct {
 
 func (x *ApplicationDeleted) Reset() {
 	*x = ApplicationDeleted{}
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[35]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2307,7 +2486,7 @@ func (x *ApplicationDeleted) String() string {
 func (*ApplicationDeleted) ProtoMessage() {}
 
 func (x *ApplicationDeleted) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[35]
+	mi := &file_waypoint_applications_v1_applications_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2320,7 +2499,7 @@ func (x *ApplicationDeleted) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApplicationDeleted.ProtoReflect.Descriptor instead.
 func (*ApplicationDeleted) Descriptor() ([]byte, []int) {
-	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{35}
+	return file_waypoint_applications_v1_applications_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *ApplicationDeleted) GetApplicationId() string {
@@ -2461,10 +2640,19 @@ const file_waypoint_applications_v1_applications_proto_rawDesc = "" +
 	"\x10recommender_name\x18\x02 \x01(\tR\x0frecommenderName\x12+\n" +
 	"\x11recommender_email\x18\x03 \x01(\tR\x10recommenderEmail\x12\"\n" +
 	"\frelationship\x18\x04 \x01(\tR\frelationship\x12#\n" +
-	"\rwaived_access\x18\x05 \x01(\bR\fwaivedAccess\"\x87\x01\n" +
+	"\rwaived_access\x18\x05 \x01(\bR\fwaivedAccess\"\xa6\x01\n" +
 	"\x1dRequestRecommendationResponse\x12P\n" +
 	"\x0erecommendation\x18\x01 \x01(\v2(.waypoint.applications.v1.RecommendationR\x0erecommendation\x12\x14\n" +
-	"\x05token\x18\x02 \x01(\tR\x05token\"C\n" +
+	"\x05token\x18\x02 \x01(\tR\x05token\x12\x1d\n" +
+	"\n" +
+	"email_sent\x18\x03 \x01(\bR\temailSent\"3\n" +
+	"\x1bRequestPasswordResetRequest\x12\x14\n" +
+	"\x05email\x18\x01 \x01(\tR\x05email\"\x1e\n" +
+	"\x1cRequestPasswordResetResponse\"O\n" +
+	"\x14ResetPasswordRequest\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12!\n" +
+	"\fnew_password\x18\x02 \x01(\tR\vnewPassword\"\x17\n" +
+	"\x15ResetPasswordResponse\"C\n" +
 	"\x1aListRecommendationsRequest\x12%\n" +
 	"\x0eapplication_id\x18\x01 \x01(\tR\rapplicationId\"q\n" +
 	"\x1bListRecommendationsResponse\x12R\n" +
@@ -2532,7 +2720,7 @@ const file_waypoint_applications_v1_applications_proto_rawDesc = "" +
 	"\x1fRECOMMENDATION_STATUS_REQUESTED\x10\x01\x12#\n" +
 	"\x1fRECOMMENDATION_STATUS_SUBMITTED\x10\x02\x12\"\n" +
 	"\x1eRECOMMENDATION_STATUS_DECLINED\x10\x03\x12#\n" +
-	"\x1fRECOMMENDATION_STATUS_CANCELLED\x10\x042\x83\x05\n" +
+	"\x1fRECOMMENDATION_STATUS_CANCELLED\x10\x042\xfd\x06\n" +
 	"\x0eAccountService\x12X\n" +
 	"\bRegister\x12).waypoint.applications.v1.RegisterRequest\x1a!.waypoint.applications.v1.Account\x12`\n" +
 	"\fAuthenticate\x12-.waypoint.applications.v1.AuthenticateRequest\x1a!.waypoint.applications.v1.Account\x12p\n" +
@@ -2540,7 +2728,9 @@ const file_waypoint_applications_v1_applications_proto_rawDesc = "" +
 	"\x0eResolveSession\x12/.waypoint.applications.v1.ResolveSessionRequest\x1a0.waypoint.applications.v1.ResolveSessionResponse\x12p\n" +
 	"\rRevokeSession\x12..waypoint.applications.v1.RevokeSessionRequest\x1a/.waypoint.applications.v1.RevokeSessionResponse\x12\\\n" +
 	"\n" +
-	"GetAccount\x12+.waypoint.applications.v1.GetAccountRequest\x1a!.waypoint.applications.v1.Account2\xdd\x05\n" +
+	"GetAccount\x12+.waypoint.applications.v1.GetAccountRequest\x1a!.waypoint.applications.v1.Account\x12\x85\x01\n" +
+	"\x14RequestPasswordReset\x125.waypoint.applications.v1.RequestPasswordResetRequest\x1a6.waypoint.applications.v1.RequestPasswordResetResponse\x12p\n" +
+	"\rResetPassword\x12..waypoint.applications.v1.ResetPasswordRequest\x1a/.waypoint.applications.v1.ResetPasswordResponse2\xdd\x05\n" +
 	"\x12ApplicationService\x12n\n" +
 	"\x11CreateApplication\x122.waypoint.applications.v1.CreateApplicationRequest\x1a%.waypoint.applications.v1.Application\x12h\n" +
 	"\x0eGetApplication\x12/.waypoint.applications.v1.GetApplicationRequest\x1a%.waypoint.applications.v1.Application\x12y\n" +
@@ -2571,7 +2761,7 @@ func file_waypoint_applications_v1_applications_proto_rawDescGZIP() []byte {
 }
 
 var file_waypoint_applications_v1_applications_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_waypoint_applications_v1_applications_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
+var file_waypoint_applications_v1_applications_proto_msgTypes = make([]protoimpl.MessageInfo, 40)
 var file_waypoint_applications_v1_applications_proto_goTypes = []any{
 	(Role)(0),                                   // 0: waypoint.applications.v1.Role
 	(ApplicationStatus)(0),                      // 1: waypoint.applications.v1.ApplicationStatus
@@ -2600,57 +2790,61 @@ var file_waypoint_applications_v1_applications_proto_goTypes = []any{
 	(*Recommendation)(nil),                      // 24: waypoint.applications.v1.Recommendation
 	(*RequestRecommendationRequest)(nil),        // 25: waypoint.applications.v1.RequestRecommendationRequest
 	(*RequestRecommendationResponse)(nil),       // 26: waypoint.applications.v1.RequestRecommendationResponse
-	(*ListRecommendationsRequest)(nil),          // 27: waypoint.applications.v1.ListRecommendationsRequest
-	(*ListRecommendationsResponse)(nil),         // 28: waypoint.applications.v1.ListRecommendationsResponse
-	(*CancelRecommendationRequest)(nil),         // 29: waypoint.applications.v1.CancelRecommendationRequest
-	(*RegenerateRecommendationLinkRequest)(nil), // 30: waypoint.applications.v1.RegenerateRecommendationLinkRequest
-	(*RecommendationInvite)(nil),                // 31: waypoint.applications.v1.RecommendationInvite
-	(*GetRecommendationInviteRequest)(nil),      // 32: waypoint.applications.v1.GetRecommendationInviteRequest
-	(*SubmitRecommendationRequest)(nil),         // 33: waypoint.applications.v1.SubmitRecommendationRequest
-	(*DeclineRecommendationRequest)(nil),        // 34: waypoint.applications.v1.DeclineRecommendationRequest
-	(*GetRecommendationPacketRequest)(nil),      // 35: waypoint.applications.v1.GetRecommendationPacketRequest
-	(*RecommendationPacket)(nil),                // 36: waypoint.applications.v1.RecommendationPacket
-	(*ApplicationUpserted)(nil),                 // 37: waypoint.applications.v1.ApplicationUpserted
-	(*ApplicationDeleted)(nil),                  // 38: waypoint.applications.v1.ApplicationDeleted
-	(*timestamppb.Timestamp)(nil),               // 39: google.protobuf.Timestamp
-	(v1.DocumentType)(0),                        // 40: waypoint.catalog.v1.DocumentType
-	(v1.RoundKind)(0),                           // 41: waypoint.catalog.v1.RoundKind
-	(*v1.Program)(nil),                          // 42: waypoint.catalog.v1.Program
+	(*RequestPasswordResetRequest)(nil),         // 27: waypoint.applications.v1.RequestPasswordResetRequest
+	(*RequestPasswordResetResponse)(nil),        // 28: waypoint.applications.v1.RequestPasswordResetResponse
+	(*ResetPasswordRequest)(nil),                // 29: waypoint.applications.v1.ResetPasswordRequest
+	(*ResetPasswordResponse)(nil),               // 30: waypoint.applications.v1.ResetPasswordResponse
+	(*ListRecommendationsRequest)(nil),          // 31: waypoint.applications.v1.ListRecommendationsRequest
+	(*ListRecommendationsResponse)(nil),         // 32: waypoint.applications.v1.ListRecommendationsResponse
+	(*CancelRecommendationRequest)(nil),         // 33: waypoint.applications.v1.CancelRecommendationRequest
+	(*RegenerateRecommendationLinkRequest)(nil), // 34: waypoint.applications.v1.RegenerateRecommendationLinkRequest
+	(*RecommendationInvite)(nil),                // 35: waypoint.applications.v1.RecommendationInvite
+	(*GetRecommendationInviteRequest)(nil),      // 36: waypoint.applications.v1.GetRecommendationInviteRequest
+	(*SubmitRecommendationRequest)(nil),         // 37: waypoint.applications.v1.SubmitRecommendationRequest
+	(*DeclineRecommendationRequest)(nil),        // 38: waypoint.applications.v1.DeclineRecommendationRequest
+	(*GetRecommendationPacketRequest)(nil),      // 39: waypoint.applications.v1.GetRecommendationPacketRequest
+	(*RecommendationPacket)(nil),                // 40: waypoint.applications.v1.RecommendationPacket
+	(*ApplicationUpserted)(nil),                 // 41: waypoint.applications.v1.ApplicationUpserted
+	(*ApplicationDeleted)(nil),                  // 42: waypoint.applications.v1.ApplicationDeleted
+	(*timestamppb.Timestamp)(nil),               // 43: google.protobuf.Timestamp
+	(v1.DocumentType)(0),                        // 44: waypoint.catalog.v1.DocumentType
+	(v1.RoundKind)(0),                           // 45: waypoint.catalog.v1.RoundKind
+	(*v1.Program)(nil),                          // 46: waypoint.catalog.v1.Program
 }
 var file_waypoint_applications_v1_applications_proto_depIdxs = []int32{
 	0,  // 0: waypoint.applications.v1.Account.role:type_name -> waypoint.applications.v1.Role
-	39, // 1: waypoint.applications.v1.Account.created_at:type_name -> google.protobuf.Timestamp
-	39, // 2: waypoint.applications.v1.CreateSessionResponse.expires_at:type_name -> google.protobuf.Timestamp
+	43, // 1: waypoint.applications.v1.Account.created_at:type_name -> google.protobuf.Timestamp
+	43, // 2: waypoint.applications.v1.CreateSessionResponse.expires_at:type_name -> google.protobuf.Timestamp
 	3,  // 3: waypoint.applications.v1.ResolveSessionResponse.account:type_name -> waypoint.applications.v1.Account
-	39, // 4: waypoint.applications.v1.ResolveSessionResponse.expires_at:type_name -> google.protobuf.Timestamp
-	40, // 5: waypoint.applications.v1.ChecklistItem.document:type_name -> waypoint.catalog.v1.DocumentType
+	43, // 4: waypoint.applications.v1.ResolveSessionResponse.expires_at:type_name -> google.protobuf.Timestamp
+	44, // 5: waypoint.applications.v1.ChecklistItem.document:type_name -> waypoint.catalog.v1.DocumentType
 	2,  // 6: waypoint.applications.v1.RecommendationSummary.status:type_name -> waypoint.applications.v1.RecommendationStatus
-	41, // 7: waypoint.applications.v1.Application.round:type_name -> waypoint.catalog.v1.RoundKind
+	45, // 7: waypoint.applications.v1.Application.round:type_name -> waypoint.catalog.v1.RoundKind
 	1,  // 8: waypoint.applications.v1.Application.status:type_name -> waypoint.applications.v1.ApplicationStatus
 	13, // 9: waypoint.applications.v1.Application.checklist:type_name -> waypoint.applications.v1.ChecklistItem
 	14, // 10: waypoint.applications.v1.Application.recommendations:type_name -> waypoint.applications.v1.RecommendationSummary
-	39, // 11: waypoint.applications.v1.Application.created_at:type_name -> google.protobuf.Timestamp
-	39, // 12: waypoint.applications.v1.Application.updated_at:type_name -> google.protobuf.Timestamp
-	39, // 13: waypoint.applications.v1.Application.submitted_at:type_name -> google.protobuf.Timestamp
-	41, // 14: waypoint.applications.v1.CreateApplicationRequest.round:type_name -> waypoint.catalog.v1.RoundKind
+	43, // 11: waypoint.applications.v1.Application.created_at:type_name -> google.protobuf.Timestamp
+	43, // 12: waypoint.applications.v1.Application.updated_at:type_name -> google.protobuf.Timestamp
+	43, // 13: waypoint.applications.v1.Application.submitted_at:type_name -> google.protobuf.Timestamp
+	45, // 14: waypoint.applications.v1.CreateApplicationRequest.round:type_name -> waypoint.catalog.v1.RoundKind
 	15, // 15: waypoint.applications.v1.ListApplicationsResponse.applications:type_name -> waypoint.applications.v1.Application
-	40, // 16: waypoint.applications.v1.ChecklistUpdate.document:type_name -> waypoint.catalog.v1.DocumentType
+	44, // 16: waypoint.applications.v1.ChecklistUpdate.document:type_name -> waypoint.catalog.v1.DocumentType
 	1,  // 17: waypoint.applications.v1.UpdateApplicationRequest.status:type_name -> waypoint.applications.v1.ApplicationStatus
-	41, // 18: waypoint.applications.v1.UpdateApplicationRequest.round:type_name -> waypoint.catalog.v1.RoundKind
+	45, // 18: waypoint.applications.v1.UpdateApplicationRequest.round:type_name -> waypoint.catalog.v1.RoundKind
 	20, // 19: waypoint.applications.v1.UpdateApplicationRequest.checklist:type_name -> waypoint.applications.v1.ChecklistUpdate
 	2,  // 20: waypoint.applications.v1.Recommendation.status:type_name -> waypoint.applications.v1.RecommendationStatus
-	39, // 21: waypoint.applications.v1.Recommendation.requested_at:type_name -> google.protobuf.Timestamp
-	39, // 22: waypoint.applications.v1.Recommendation.responded_at:type_name -> google.protobuf.Timestamp
-	39, // 23: waypoint.applications.v1.Recommendation.link_expires_at:type_name -> google.protobuf.Timestamp
+	43, // 21: waypoint.applications.v1.Recommendation.requested_at:type_name -> google.protobuf.Timestamp
+	43, // 22: waypoint.applications.v1.Recommendation.responded_at:type_name -> google.protobuf.Timestamp
+	43, // 23: waypoint.applications.v1.Recommendation.link_expires_at:type_name -> google.protobuf.Timestamp
 	24, // 24: waypoint.applications.v1.RequestRecommendationResponse.recommendation:type_name -> waypoint.applications.v1.Recommendation
 	24, // 25: waypoint.applications.v1.ListRecommendationsResponse.recommendations:type_name -> waypoint.applications.v1.Recommendation
 	2,  // 26: waypoint.applications.v1.RecommendationInvite.status:type_name -> waypoint.applications.v1.RecommendationStatus
-	39, // 27: waypoint.applications.v1.RecommendationInvite.link_expires_at:type_name -> google.protobuf.Timestamp
+	43, // 27: waypoint.applications.v1.RecommendationInvite.link_expires_at:type_name -> google.protobuf.Timestamp
 	15, // 28: waypoint.applications.v1.RecommendationPacket.application:type_name -> waypoint.applications.v1.Application
 	3,  // 29: waypoint.applications.v1.RecommendationPacket.student:type_name -> waypoint.applications.v1.Account
-	42, // 30: waypoint.applications.v1.RecommendationPacket.program:type_name -> waypoint.catalog.v1.Program
+	46, // 30: waypoint.applications.v1.RecommendationPacket.program:type_name -> waypoint.catalog.v1.Program
 	24, // 31: waypoint.applications.v1.RecommendationPacket.recommendations:type_name -> waypoint.applications.v1.Recommendation
-	39, // 32: waypoint.applications.v1.RecommendationPacket.generated_at:type_name -> google.protobuf.Timestamp
+	43, // 32: waypoint.applications.v1.RecommendationPacket.generated_at:type_name -> google.protobuf.Timestamp
 	15, // 33: waypoint.applications.v1.ApplicationUpserted.application:type_name -> waypoint.applications.v1.Application
 	4,  // 34: waypoint.applications.v1.AccountService.Register:input_type -> waypoint.applications.v1.RegisterRequest
 	5,  // 35: waypoint.applications.v1.AccountService.Authenticate:input_type -> waypoint.applications.v1.AuthenticateRequest
@@ -2658,40 +2852,44 @@ var file_waypoint_applications_v1_applications_proto_depIdxs = []int32{
 	8,  // 37: waypoint.applications.v1.AccountService.ResolveSession:input_type -> waypoint.applications.v1.ResolveSessionRequest
 	10, // 38: waypoint.applications.v1.AccountService.RevokeSession:input_type -> waypoint.applications.v1.RevokeSessionRequest
 	12, // 39: waypoint.applications.v1.AccountService.GetAccount:input_type -> waypoint.applications.v1.GetAccountRequest
-	16, // 40: waypoint.applications.v1.ApplicationService.CreateApplication:input_type -> waypoint.applications.v1.CreateApplicationRequest
-	17, // 41: waypoint.applications.v1.ApplicationService.GetApplication:input_type -> waypoint.applications.v1.GetApplicationRequest
-	18, // 42: waypoint.applications.v1.ApplicationService.ListApplications:input_type -> waypoint.applications.v1.ListApplicationsRequest
-	21, // 43: waypoint.applications.v1.ApplicationService.UpdateApplication:input_type -> waypoint.applications.v1.UpdateApplicationRequest
-	22, // 44: waypoint.applications.v1.ApplicationService.DeleteApplication:input_type -> waypoint.applications.v1.DeleteApplicationRequest
-	35, // 45: waypoint.applications.v1.ApplicationService.GetRecommendationPacket:input_type -> waypoint.applications.v1.GetRecommendationPacketRequest
-	25, // 46: waypoint.applications.v1.RecommendationService.RequestRecommendation:input_type -> waypoint.applications.v1.RequestRecommendationRequest
-	27, // 47: waypoint.applications.v1.RecommendationService.ListRecommendations:input_type -> waypoint.applications.v1.ListRecommendationsRequest
-	29, // 48: waypoint.applications.v1.RecommendationService.CancelRecommendation:input_type -> waypoint.applications.v1.CancelRecommendationRequest
-	30, // 49: waypoint.applications.v1.RecommendationService.RegenerateRecommendationLink:input_type -> waypoint.applications.v1.RegenerateRecommendationLinkRequest
-	32, // 50: waypoint.applications.v1.RecommendationService.GetRecommendationInvite:input_type -> waypoint.applications.v1.GetRecommendationInviteRequest
-	33, // 51: waypoint.applications.v1.RecommendationService.SubmitRecommendation:input_type -> waypoint.applications.v1.SubmitRecommendationRequest
-	34, // 52: waypoint.applications.v1.RecommendationService.DeclineRecommendation:input_type -> waypoint.applications.v1.DeclineRecommendationRequest
-	3,  // 53: waypoint.applications.v1.AccountService.Register:output_type -> waypoint.applications.v1.Account
-	3,  // 54: waypoint.applications.v1.AccountService.Authenticate:output_type -> waypoint.applications.v1.Account
-	7,  // 55: waypoint.applications.v1.AccountService.CreateSession:output_type -> waypoint.applications.v1.CreateSessionResponse
-	9,  // 56: waypoint.applications.v1.AccountService.ResolveSession:output_type -> waypoint.applications.v1.ResolveSessionResponse
-	11, // 57: waypoint.applications.v1.AccountService.RevokeSession:output_type -> waypoint.applications.v1.RevokeSessionResponse
-	3,  // 58: waypoint.applications.v1.AccountService.GetAccount:output_type -> waypoint.applications.v1.Account
-	15, // 59: waypoint.applications.v1.ApplicationService.CreateApplication:output_type -> waypoint.applications.v1.Application
-	15, // 60: waypoint.applications.v1.ApplicationService.GetApplication:output_type -> waypoint.applications.v1.Application
-	19, // 61: waypoint.applications.v1.ApplicationService.ListApplications:output_type -> waypoint.applications.v1.ListApplicationsResponse
-	15, // 62: waypoint.applications.v1.ApplicationService.UpdateApplication:output_type -> waypoint.applications.v1.Application
-	23, // 63: waypoint.applications.v1.ApplicationService.DeleteApplication:output_type -> waypoint.applications.v1.DeleteApplicationResponse
-	36, // 64: waypoint.applications.v1.ApplicationService.GetRecommendationPacket:output_type -> waypoint.applications.v1.RecommendationPacket
-	26, // 65: waypoint.applications.v1.RecommendationService.RequestRecommendation:output_type -> waypoint.applications.v1.RequestRecommendationResponse
-	28, // 66: waypoint.applications.v1.RecommendationService.ListRecommendations:output_type -> waypoint.applications.v1.ListRecommendationsResponse
-	24, // 67: waypoint.applications.v1.RecommendationService.CancelRecommendation:output_type -> waypoint.applications.v1.Recommendation
-	26, // 68: waypoint.applications.v1.RecommendationService.RegenerateRecommendationLink:output_type -> waypoint.applications.v1.RequestRecommendationResponse
-	31, // 69: waypoint.applications.v1.RecommendationService.GetRecommendationInvite:output_type -> waypoint.applications.v1.RecommendationInvite
-	31, // 70: waypoint.applications.v1.RecommendationService.SubmitRecommendation:output_type -> waypoint.applications.v1.RecommendationInvite
-	31, // 71: waypoint.applications.v1.RecommendationService.DeclineRecommendation:output_type -> waypoint.applications.v1.RecommendationInvite
-	53, // [53:72] is the sub-list for method output_type
-	34, // [34:53] is the sub-list for method input_type
+	27, // 40: waypoint.applications.v1.AccountService.RequestPasswordReset:input_type -> waypoint.applications.v1.RequestPasswordResetRequest
+	29, // 41: waypoint.applications.v1.AccountService.ResetPassword:input_type -> waypoint.applications.v1.ResetPasswordRequest
+	16, // 42: waypoint.applications.v1.ApplicationService.CreateApplication:input_type -> waypoint.applications.v1.CreateApplicationRequest
+	17, // 43: waypoint.applications.v1.ApplicationService.GetApplication:input_type -> waypoint.applications.v1.GetApplicationRequest
+	18, // 44: waypoint.applications.v1.ApplicationService.ListApplications:input_type -> waypoint.applications.v1.ListApplicationsRequest
+	21, // 45: waypoint.applications.v1.ApplicationService.UpdateApplication:input_type -> waypoint.applications.v1.UpdateApplicationRequest
+	22, // 46: waypoint.applications.v1.ApplicationService.DeleteApplication:input_type -> waypoint.applications.v1.DeleteApplicationRequest
+	39, // 47: waypoint.applications.v1.ApplicationService.GetRecommendationPacket:input_type -> waypoint.applications.v1.GetRecommendationPacketRequest
+	25, // 48: waypoint.applications.v1.RecommendationService.RequestRecommendation:input_type -> waypoint.applications.v1.RequestRecommendationRequest
+	31, // 49: waypoint.applications.v1.RecommendationService.ListRecommendations:input_type -> waypoint.applications.v1.ListRecommendationsRequest
+	33, // 50: waypoint.applications.v1.RecommendationService.CancelRecommendation:input_type -> waypoint.applications.v1.CancelRecommendationRequest
+	34, // 51: waypoint.applications.v1.RecommendationService.RegenerateRecommendationLink:input_type -> waypoint.applications.v1.RegenerateRecommendationLinkRequest
+	36, // 52: waypoint.applications.v1.RecommendationService.GetRecommendationInvite:input_type -> waypoint.applications.v1.GetRecommendationInviteRequest
+	37, // 53: waypoint.applications.v1.RecommendationService.SubmitRecommendation:input_type -> waypoint.applications.v1.SubmitRecommendationRequest
+	38, // 54: waypoint.applications.v1.RecommendationService.DeclineRecommendation:input_type -> waypoint.applications.v1.DeclineRecommendationRequest
+	3,  // 55: waypoint.applications.v1.AccountService.Register:output_type -> waypoint.applications.v1.Account
+	3,  // 56: waypoint.applications.v1.AccountService.Authenticate:output_type -> waypoint.applications.v1.Account
+	7,  // 57: waypoint.applications.v1.AccountService.CreateSession:output_type -> waypoint.applications.v1.CreateSessionResponse
+	9,  // 58: waypoint.applications.v1.AccountService.ResolveSession:output_type -> waypoint.applications.v1.ResolveSessionResponse
+	11, // 59: waypoint.applications.v1.AccountService.RevokeSession:output_type -> waypoint.applications.v1.RevokeSessionResponse
+	3,  // 60: waypoint.applications.v1.AccountService.GetAccount:output_type -> waypoint.applications.v1.Account
+	28, // 61: waypoint.applications.v1.AccountService.RequestPasswordReset:output_type -> waypoint.applications.v1.RequestPasswordResetResponse
+	30, // 62: waypoint.applications.v1.AccountService.ResetPassword:output_type -> waypoint.applications.v1.ResetPasswordResponse
+	15, // 63: waypoint.applications.v1.ApplicationService.CreateApplication:output_type -> waypoint.applications.v1.Application
+	15, // 64: waypoint.applications.v1.ApplicationService.GetApplication:output_type -> waypoint.applications.v1.Application
+	19, // 65: waypoint.applications.v1.ApplicationService.ListApplications:output_type -> waypoint.applications.v1.ListApplicationsResponse
+	15, // 66: waypoint.applications.v1.ApplicationService.UpdateApplication:output_type -> waypoint.applications.v1.Application
+	23, // 67: waypoint.applications.v1.ApplicationService.DeleteApplication:output_type -> waypoint.applications.v1.DeleteApplicationResponse
+	40, // 68: waypoint.applications.v1.ApplicationService.GetRecommendationPacket:output_type -> waypoint.applications.v1.RecommendationPacket
+	26, // 69: waypoint.applications.v1.RecommendationService.RequestRecommendation:output_type -> waypoint.applications.v1.RequestRecommendationResponse
+	32, // 70: waypoint.applications.v1.RecommendationService.ListRecommendations:output_type -> waypoint.applications.v1.ListRecommendationsResponse
+	24, // 71: waypoint.applications.v1.RecommendationService.CancelRecommendation:output_type -> waypoint.applications.v1.Recommendation
+	26, // 72: waypoint.applications.v1.RecommendationService.RegenerateRecommendationLink:output_type -> waypoint.applications.v1.RequestRecommendationResponse
+	35, // 73: waypoint.applications.v1.RecommendationService.GetRecommendationInvite:output_type -> waypoint.applications.v1.RecommendationInvite
+	35, // 74: waypoint.applications.v1.RecommendationService.SubmitRecommendation:output_type -> waypoint.applications.v1.RecommendationInvite
+	35, // 75: waypoint.applications.v1.RecommendationService.DeclineRecommendation:output_type -> waypoint.applications.v1.RecommendationInvite
+	55, // [55:76] is the sub-list for method output_type
+	34, // [34:55] is the sub-list for method input_type
 	34, // [34:34] is the sub-list for extension type_name
 	34, // [34:34] is the sub-list for extension extendee
 	0,  // [0:34] is the sub-list for field type_name
@@ -2709,7 +2907,7 @@ func file_waypoint_applications_v1_applications_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_waypoint_applications_v1_applications_proto_rawDesc), len(file_waypoint_applications_v1_applications_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   36,
+			NumMessages:   40,
 			NumExtensions: 0,
 			NumServices:   3,
 		},

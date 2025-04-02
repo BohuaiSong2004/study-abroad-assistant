@@ -180,7 +180,8 @@ func (s *RecommendationService) RequestRecommendation(ctx context.Context, req *
 		return nil, s.mapErr(ctx, err)
 	}
 	s.log.InfoContext(ctx, "recommendation requested", "application_id", cur.Id, "recommendation_id", rec.Id)
-	return &appsv1.RequestRecommendationResponse{Recommendation: studentView(rec), Token: token}, nil
+	sent := s.emailInvite(ctx, me.UserID, cur, rec, token)
+	return &appsv1.RequestRecommendationResponse{Recommendation: studentView(rec), Token: token, EmailSent: sent}, nil
 }
 
 // ListRecommendations lists an application's recommendations.
@@ -283,7 +284,8 @@ func (s *RecommendationService) RegenerateRecommendationLink(ctx context.Context
 	if err != nil {
 		return nil, s.mapErr(ctx, err)
 	}
-	return &appsv1.RequestRecommendationResponse{Recommendation: studentView(r.rec), Token: token}, nil
+	sent := s.emailInvite(ctx, me.UserID, a, r.rec, token)
+	return &appsv1.RequestRecommendationResponse{Recommendation: studentView(r.rec), Token: token, EmailSent: sent}, nil
 }
 
 // resolveInvite maps a token to its recommendation.

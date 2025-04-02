@@ -166,6 +166,43 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	s.startSession(w, r, a, form)
 }
 
+// requestPasswordReset always answers 202 for a well-formed email, whether
+// or not it has an account.
+func (s *Server) requestPasswordReset(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Email string `json:"email"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	ctx, cancel := s.backend(r)
+	defer cancel()
+	if _, err := s.c.Accounts.RequestPasswordReset(ctx, &appsv1.RequestPasswordResetRequest{Email: in.Email}); err != nil {
+		writeRPCError(w, r, s.log, err)
+		return
+	}
+	writeJSON(w, http.StatusAccepted, map[string]any{"ok": true})
+}
+
+// resetPassword sets a new password with a reset token. Sessions elsewhere
+// end within the gateway's short session cache TTL.
+func (s *Server) resetPassword(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Token    string `json:"token"`
+		Password string `json:"password"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	ctx, cancel := s.backend(r)
+	defer cancel()
+	if _, err := s.c.Accounts.ResetPassword(ctx, &appsv1.ResetPasswordRequest{Token: in.Token, NewPassword: in.Password}); err != nil {
+		writeRPCError(w, r, s.log, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
 func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 	if c, err := r.Cookie(sessionCookie); err == nil && c.Value != "" {
 		s.sessions.Delete(c.Value)

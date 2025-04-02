@@ -4,6 +4,10 @@
 #   docker run --rm -p 8000:8000 amazon/dynamodb-local   # in another terminal
 #   ./scripts/dev.sh                                     # then open http://localhost:8080
 #
+# Email is logged (MAIL_MODE=log) unless an SMTP relay is given, e.g. Mailpit:
+#   docker run --rm -p 1025:1025 -p 8025:8025 axllent/mailpit:v1.29
+#   MAIL_MODE=smtp SMTP_ADDR=localhost:1025 ./scripts/dev.sh   # inbox: http://localhost:8025
+#
 # Ctrl-C stops everything.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -19,6 +23,7 @@ export CATALOG_ADDR=dns:///localhost:9091 APPLICATIONS_ADDR=dns:///localhost:909
 export AUTH_RATE_PER_MIN="${AUTH_RATE_PER_MIN:-300}"
 export LOGIN_LIMIT_PER_IP="${LOGIN_LIMIT_PER_IP:-2000}"
 export REGISTER_LIMIT_PER_IP="${REGISTER_LIMIT_PER_IP:-2000}"
+export MAIL_MODE="${MAIL_MODE:-log}" PUBLIC_URL="${PUBLIC_URL:-http://localhost:8080}"
 export BOOTSTRAP_COUNSELOR_EMAIL="${BOOTSTRAP_COUNSELOR_EMAIL:-counselor@example.com}"
 export BOOTSTRAP_COUNSELOR_PASSWORD="${BOOTSTRAP_COUNSELOR_PASSWORD:-counselor-demo-password}"
 

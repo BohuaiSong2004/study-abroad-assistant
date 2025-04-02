@@ -1,5 +1,6 @@
 # Full stack on DynamoDB Local:  docker compose up --build
 # Then open http://localhost:8080 (counselor: counselor@example.com / counselor-demo-password).
+# Invitation and password-reset emails land in Mailpit: http://localhost:8025.
 name: waypoint
 
 x-service: &service
@@ -28,6 +29,12 @@ services:
     ports: ["8000:8000"]
     restart: unless-stopped
 
+  # Catches all outgoing email: inbox at http://localhost:8025.
+  mailpit:
+    image: axllent/mailpit:v1.29
+    ports: ["8025:8025"]
+    restart: unless-stopped
+
   catalog:
     <<: *service
     build: { context: ., args: { SERVICE: catalog } }
@@ -46,6 +53,10 @@ services:
       ADMIN_ADDR: ":9102"
       BOOTSTRAP_COUNSELOR_EMAIL: ${BOOTSTRAP_COUNSELOR_EMAIL:-counselor@example.com}
       BOOTSTRAP_COUNSELOR_PASSWORD: ${BOOTSTRAP_COUNSELOR_PASSWORD:-counselor-demo-password}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8080}
+      MAIL_MODE: smtp
+      SMTP_ADDR: mailpit:1025
+      MAIL_FROM: ${MAIL_FROM:-Waypoint <no-reply@waypoint.local>}
       # Shared limits stay on; the per-address thresholds allow repeated runs
       # of the e2e suite from one machine (production defaults: 60 sign-ins
       # per 10 min, 20 sign-ups per hour per address).
@@ -53,6 +64,7 @@ services:
       REGISTER_LIMIT_PER_IP: ${REGISTER_LIMIT_PER_IP:-2000}
     depends_on:
       dynamodb: { condition: service_started }
+      mailpit: { condition: service_started }
       catalog: { condition: service_healthy }
 
   timeline:

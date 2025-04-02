@@ -90,9 +90,12 @@ locals {
       PUBLIC_URL      = local.public_url
       TRUSTED_PROXIES = var.vpc_cidr # the ALB's addresses
     }
-    catalog      = { GRPC_ADDR = ":9091", ADMIN_ADDR = ":9101" }
-    applications = { GRPC_ADDR = ":9092", ADMIN_ADDR = ":9102", BOOTSTRAP_COUNSELOR_EMAIL = var.bootstrap_counselor_email }
-    timeline     = { GRPC_ADDR = ":9093", ADMIN_ADDR = ":9103" }
+    catalog = { GRPC_ADDR = ":9091", ADMIN_ADDR = ":9101" }
+    applications = {
+      GRPC_ADDR  = ":9092", ADMIN_ADDR = ":9102", BOOTSTRAP_COUNSELOR_EMAIL = var.bootstrap_counselor_email
+      PUBLIC_URL = local.public_url, MAIL_MODE = "smtp", SMTP_ADDR = local.smtp_addr, MAIL_FROM = "Waypoint <${var.mail_from_address}>"
+    }
+    timeline = { GRPC_ADDR = ":9093", ADMIN_ADDR = ":9103" }
   }
 
   service_secrets = {
@@ -102,6 +105,8 @@ locals {
     applications = [
       { name = "INTERNAL_TOKEN", valueFrom = aws_secretsmanager_secret.internal_token.arn },
       { name = "BOOTSTRAP_COUNSELOR_PASSWORD", valueFrom = aws_secretsmanager_secret.counselor_password.arn },
+      { name = "SMTP_USERNAME", valueFrom = "${aws_secretsmanager_secret.smtp.arn}:username::" },
+      { name = "SMTP_PASSWORD", valueFrom = "${aws_secretsmanager_secret.smtp.arn}:password::" },
     ]
   }
 }

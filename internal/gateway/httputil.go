@@ -56,6 +56,7 @@ var grpcToHTTP = map[codes.Code]struct {
 	codes.Unavailable:        {http.StatusServiceUnavailable, "unavailable"},
 	codes.DeadlineExceeded:   {http.StatusGatewayTimeout, "timeout"},
 	codes.Canceled:           {499, "cancelled"},
+	codes.Unimplemented:      {http.StatusNotImplemented, "not_implemented"},
 }
 
 // writeRPCError maps a gRPC error to an HTTP response. Internal details are

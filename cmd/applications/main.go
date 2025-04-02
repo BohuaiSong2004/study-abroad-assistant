@@ -13,6 +13,7 @@ import (
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/applications"
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/ddb"
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/events"
+	"github.com/BohuaiSong2004/study-abroad-assistant/internal/mail"
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/platform"
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/svc"
 )
@@ -36,6 +37,11 @@ func main() {
 		FailuresPerEmail: applications.Limit{N: platform.EnvInt("LOGIN_FAILURES_PER_ACCOUNT", d.FailuresPerEmail.N), Window: d.FailuresPerEmail.Window},
 		RegisterPerIP:    applications.Limit{N: platform.EnvInt("REGISTER_LIMIT_PER_IP", d.RegisterPerIP.N), Window: d.RegisterPerIP.Window},
 	})
+	mailer, err := mail.FromEnv(b.Log)
+	if err != nil {
+		svc.Fatal("applications", err)
+	}
+	accounts.SetMailer(mailer, platform.Env("PUBLIC_URL", "http://localhost:8080"))
 	appsv1.RegisterAccountServiceServer(b.GRPC, accounts)
 	appsv1.RegisterApplicationServiceServer(b.GRPC, applications.NewApplicationService(store, accounts, catalogClient, b.Log))
 	appsv1.RegisterRecommendationServiceServer(b.GRPC, applications.NewRecommendationService(store, accounts, catalogClient, b.Log))

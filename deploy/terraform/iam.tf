@@ -25,6 +25,7 @@ data "aws_iam_policy_document" "execution_secrets" {
     resources = [
       aws_secretsmanager_secret.internal_token.arn,
       aws_secretsmanager_secret.counselor_password.arn,
+      aws_secretsmanager_secret.smtp.arn,
     ]
   }
 }

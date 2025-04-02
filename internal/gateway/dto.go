@@ -237,6 +237,8 @@ type recommendationDTO struct {
 	LinkExpiresAt string `json:"linkExpiresAt,omitempty"`
 	// InviteURL is only present right after creating or regenerating a link.
 	InviteURL string `json:"inviteUrl,omitempty"`
+	// EmailSent reports whether that link was also emailed to the recommender.
+	EmailSent bool `json:"emailSent"`
 }
 
 func recommendationOut(r *appsv1.Recommendation) recommendationDTO {

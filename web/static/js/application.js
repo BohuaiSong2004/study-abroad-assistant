@@ -203,7 +203,12 @@ jQuery(function ($) {
   function inviteBox(rec) {
     var inputId = "link-" + rec.id;
     var $box = $('<div class="invite-box mt-075"></div>');
-    $box.append($('<label class="small"></label>').attr("for", inputId).text("Invitation link for " + rec.name + " (send it to them; it's shown only now)"));
+    if (rec.emailSent) {
+      $box.append($('<p class="small m-0" role="status"></p>').text("We emailed the invitation to " + rec.email + ". You can also share the link yourself; it's shown only now."));
+      $box.append($('<label class="small"></label>').attr("for", inputId).text("Invitation link for " + rec.name));
+    } else {
+      $box.append($('<label class="small"></label>').attr("for", inputId).text("Invitation link for " + rec.name + " (send it to them; it's shown only now)"));
+    }
     var $in = $('<input type="text" readonly>').attr("id", inputId).val(rec.inviteUrl);
     var $copy = $('<button type="button" class="btn secondary small">Copy</button>').on("click", function () {
       var done = function () { WP.toast("Link copied."); };

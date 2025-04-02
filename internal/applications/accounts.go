@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"log/slog"
-	"net/mail"
+	netmail "net/mail"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -21,6 +21,7 @@ import (
 	appsv1 "github.com/BohuaiSong2004/study-abroad-assistant/gen/waypoint/applications/v1"
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/ddb"
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/ids"
+	"github.com/BohuaiSong2004/study-abroad-assistant/internal/mail"
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/platform"
 )
 
@@ -35,6 +36,10 @@ const SessionTTL = 7 * 24 * time.Hour
 //	pk=EMAIL#<email>    sk=EMAIL    user id (uniqueness guard)
 //	pk=SESSION#<sha256> sk=SESSION  user id, expiry (DynamoDB TTL)
 //	pk=RL#...           sk=W#...    rate-limit windows (see ratelimit.go)
+//	pk=RESET#<sha256>   sk=RESET    password-reset token (see reset.go)
+//
+// The profile's sess_epoch counts password resets; a session records the
+// epoch it was created in and stops resolving once the epoch moves on.
 type AccountService struct {
 	appsv1.UnimplementedAccountServiceServer
 	api    ddb.API
@@ -45,6 +50,9 @@ type AccountService struct {
 	dummy  string
 	limits Limits
 	rl     *windows
+
+	mailer    mail.Sender
+	publicURL string
 }
 
 // SetLimits replaces the abuse limits (DefaultLimits otherwise).
@@ -71,7 +79,7 @@ func sessionKey(token string) map[string]types.AttributeValue {
 // NormalizeEmail lower-cases and validates an address.
 func NormalizeEmail(e string) (string, error) {
 	e = strings.ToLower(strings.TrimSpace(e))
-	a, err := mail.ParseAddress(e)
+	a, err := netmail.ParseAddress(e)
 	if err != nil || a.Address != e || len(e) > 254 || !strings.Contains(e[strings.LastIndex(e, "@"):], ".") {
 		return "", errors.New("enter a valid email address")
 	}
@@ -264,10 +272,15 @@ func (s *AccountService) CreateSession(ctx context.Context, req *appsv1.CreateSe
 	if req.GetAccountId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "account_id is required")
 	}
+	user, err := s.loadUser(ctx, req.GetAccountId())
+	if err != nil {
+		return nil, platform.InternalError(ctx, s.log, "load account", err)
+	}
 	token := ids.Token()
 	exp := s.now().Add(SessionTTL)
 	item := sessionKey(token)
 	item["user_id"] = ddb.S(req.GetAccountId())
+	item["epoch"] = ddb.N(ddb.GetN(user, "sess_epoch"))
 	item["expires_ms"] = ddb.N(exp.UnixMilli())
 	item[ddb.TTL] = ddb.N(exp.Unix())
 	if _, err := s.api.PutItem(ctx, &dynamodb.PutItemInput{TableName: aws.String(s.table), Item: item}); err != nil {
@@ -292,13 +305,19 @@ func (s *AccountService) ResolveSession(ctx context.Context, req *appsv1.Resolve
 	if out.Item == nil || ddb.GetN(out.Item, "expires_ms") < s.now().UnixMilli() {
 		return nil, unauth
 	}
-	acct, err := s.getAccount(ctx, ddb.GetS(out.Item, "user_id"))
-	if err != nil {
-		if status.Code(err) == codes.NotFound {
-			return nil, unauth
-		}
-		return nil, err
+	// The profile is read consistently, not from the cache: a password reset
+	// on another replica must end this session at once.
+	user, err := s.loadUser(ctx, ddb.GetS(out.Item, "user_id"))
+	if status.Code(err) == codes.NotFound {
+		return nil, unauth
 	}
+	if err != nil {
+		return nil, platform.InternalError(ctx, s.log, "resolve session", err)
+	}
+	if ddb.GetN(user, "sess_epoch") != ddb.GetN(out.Item, "epoch") {
+		return nil, unauth // signed out by a password reset
+	}
+	acct := accountFromItem(user)
 	return &appsv1.ResolveSessionResponse{Account: acct, ExpiresAt: timestamppb.New(time.UnixMilli(ddb.GetN(out.Item, "expires_ms")))}, nil
 }
 

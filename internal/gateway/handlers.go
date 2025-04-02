@@ -7,6 +7,7 @@ import (
 	appsv1 "github.com/BohuaiSong2004/study-abroad-assistant/gen/waypoint/applications/v1"
 	catalogv1 "github.com/BohuaiSong2004/study-abroad-assistant/gen/waypoint/catalog/v1"
 	timelinev1 "github.com/BohuaiSong2004/study-abroad-assistant/gen/waypoint/timeline/v1"
+	"github.com/BohuaiSong2004/study-abroad-assistant/internal/links"
 )
 
 func bad(w http.ResponseWriter, msg string) {
@@ -352,7 +353,7 @@ func (s *Server) deleteMilestone(w http.ResponseWriter, r *http.Request) {
 func (s *Server) inviteURL(token string) string {
 	// The token travels in the fragment, so it never reaches server logs,
 	// proxies or Referer headers; the page posts it in a JSON body.
-	return s.cfg.PublicURL + "/recommend.html#token=" + token
+	return links.Invite(s.cfg.PublicURL, token)
 }
 
 func (s *Server) listRecommendations(w http.ResponseWriter, r *http.Request) {
@@ -392,6 +393,7 @@ func (s *Server) requestRecommendation(w http.ResponseWriter, r *http.Request) {
 	}
 	out := recommendationOut(res.Recommendation)
 	out.InviteURL = s.inviteURL(res.Token)
+	out.EmailSent = res.EmailSent
 	writeJSON(w, http.StatusCreated, out)
 }
 
@@ -416,6 +418,7 @@ func (s *Server) regenerateLink(w http.ResponseWriter, r *http.Request) {
 	}
 	out := recommendationOut(res.Recommendation)
 	out.InviteURL = s.inviteURL(res.Token)
+	out.EmailSent = res.EmailSent
 	writeJSON(w, http.StatusOK, out)
 }
 

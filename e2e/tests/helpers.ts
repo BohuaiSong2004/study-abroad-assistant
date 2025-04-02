@@ -101,3 +101,35 @@ export async function startApplication(page: Page, program: { id: string; univer
   await expect(page.locator("body")).toHaveAttribute("data-ready", "true");
   return new URL(page.url()).searchParams.get("id")!;
 }
+
+/** Mailpit's HTTP API, when the stack sends email there (CI, compose). */
+export const mailpitURL = process.env.E2E_MAILPIT_URL ?? "";
+
+/** Waits for the newest email to `to` and returns its plain-text body. */
+export async function lastEmailTo(to: string, timeoutMs = 10_000): Promise<{ subject: string; text: string }> {
+  const api = await pwRequest.newContext({ baseURL: mailpitURL });
+  const deadline = Date.now() + timeoutMs;
+  try {
+    while (Date.now() < deadline) {
+      const res = await api.get("/api/v1/search", { params: { query: `to:"${to}"`, limit: "1" } });
+      if (res.ok()) {
+        const list = await res.json();
+        if (list.messages?.length) {
+          const msg = await (await api.get(`/api/v1/message/${list.messages[0].ID}`)).json();
+          return { subject: msg.Subject, text: msg.Text };
+        }
+      }
+      await new Promise((r) => setTimeout(r, 200));
+    }
+    throw new Error(`no email to ${to} within ${timeoutMs} ms`);
+  } finally {
+    await api.dispose();
+  }
+}
+
+/** The link with a #token= fragment in an email body. */
+export function tokenLink(text: string, page: "recommend" | "reset"): string {
+  const m = text.match(new RegExp(`https?://\\S+/${page}\\.html#token=[A-Za-z0-9_-]+`));
+  if (!m) throw new Error(`no ${page} link in:\n${text}`);
+  return m[0];
+}

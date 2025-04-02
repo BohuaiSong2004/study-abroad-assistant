@@ -13,7 +13,12 @@ not running on AWS, so there are no production measurements of DAX.
 | Discovery | Cloud Map private DNS; gRPC clients use `dns:///` + round robin |
 | Edge | ALB (HTTP, or HTTPS with an ACM certificate) → gateway |
 | Security | Per-service IAM task roles limited to the service's own table + DAX; internal token and bootstrap password in Secrets Manager; read-only root filesystems |
+| Email | SES over SMTP: an IAM user allowed only `ses:SendRawEmail` from `mail_from_address`, its SMTP password (derived by Terraform) in Secrets Manager, optional SES domain identity (`mail_domain`) |
 | Images | ECR repositories with scan-on-push, immutable tags |
+
+Before applying: the SES SMTP key is stored in Terraform state, so use an
+encrypted remote backend; and a new SES account is in the sandbox (mail only
+reaches verified addresses) until production access is requested.
 
 ```sh
 cd deploy/terraform

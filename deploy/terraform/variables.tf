@@ -93,3 +93,21 @@ variable "bootstrap_counselor_email" {
   type        = string
   default     = ""
 }
+
+variable "mail_from_address" {
+  description = "Sender address for transactional email; must be (or belong to a domain) verified in SES."
+  type        = string
+  default     = "no-reply@example.com"
+}
+
+variable "mail_domain" {
+  description = "Domain to verify as an SES identity (DKIM records must then be published). Empty skips it, e.g. when the identity is managed elsewhere."
+  type        = string
+  default     = ""
+}
+
+variable "smtp_addr" {
+  description = "SMTP relay host:port. Defaults to the SES SMTP endpoint of var.region."
+  type        = string
+  default     = ""
+}

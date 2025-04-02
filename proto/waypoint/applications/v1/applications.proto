@@ -17,6 +17,12 @@ service AccountService {
   rpc ResolveSession(ResolveSessionRequest) returns (ResolveSessionResponse);
   rpc RevokeSession(RevokeSessionRequest) returns (RevokeSessionResponse);
   rpc GetAccount(GetAccountRequest) returns (Account);
+  // Emails a single-use reset link if the email belongs to an account. The
+  // response is the same either way, so it reveals nothing about which
+  // emails are registered.
+  rpc RequestPasswordReset(RequestPasswordResetRequest) returns (RequestPasswordResetResponse);
+  // Sets a new password with a reset token and signs out every session.
+  rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse);
 }
 
 service ApplicationService {
@@ -214,7 +220,24 @@ message RequestRecommendationResponse {
   Recommendation recommendation = 1;
   // Raw invitation token; returned exactly once, only its hash is stored.
   string token = 2;
+  // True if the invitation was emailed to the recommender. False when email
+  // is not configured, delivery failed or the student's daily email limit is
+  // reached; the student can still share the link.
+  bool email_sent = 3;
 }
+
+message RequestPasswordResetRequest {
+  string email = 1;
+}
+
+message RequestPasswordResetResponse {}
+
+message ResetPasswordRequest {
+  string token = 1;
+  string new_password = 2;
+}
+
+message ResetPasswordResponse {}
 
 message ListRecommendationsRequest {
   string application_id = 1;

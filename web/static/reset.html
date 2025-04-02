@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reset your password · Waypoint</title>
+<meta name="description" content="Reset your Waypoint password.">
+<meta name="theme-color" content="#0b6e65">
+<link rel="icon" href="/img/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/app.css">
+<script defer src="/vendor/jquery-3.7.1.min.js"></script>
+<script defer src="/js/common.js"></script>
+<script defer src="/js/reset.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="bar">
+    <a class="brand" href="/"><img src="/img/logo.svg" alt="" width="28" height="28"> Waypoint</a>
+    <nav id="site-nav" class="site-nav" aria-label="Main"></nav>
+    <div id="user-menu" class="user-menu"></div>
+  </div>
+</header>
+<main id="main">
+<div class="narrow">
+  <h1 id="reset-title">Reset your password</h1>
+  <div class="card" id="request">
+    <form id="request-form" novalidate>
+      <p class="muted">Enter the email you signed up with. We'll send a link to choose a new password.</p>
+      <p class="form-error" role="alert" id="request-error"></p>
+      <div class="field">
+        <label for="reset-email">Email</label>
+        <input id="reset-email" type="email" autocomplete="email" required>
+      </div>
+      <button class="btn" type="submit" data-requires-js disabled>Email me a link</button>
+    </form>
+    <div id="request-done" hidden>
+      <p role="status" id="request-done-text"></p>
+      <p class="muted small">Nothing arrived? Check your spam folder, or <a href="/reset.html">try again</a>.</p>
+    </div>
+  </div>
+  <div class="card" id="choose" hidden>
+    <form id="choose-form" novalidate>
+      <p class="form-error" role="alert" id="choose-error"></p>
+      <div class="field">
+        <label for="new-password">New password</label>
+        <input id="new-password" type="password" autocomplete="new-password" minlength="10" maxlength="256" required aria-describedby="new-password-hint">
+        <p class="hint" id="new-password-hint">At least 10 characters. Resetting signs you out on every device.</p>
+      </div>
+      <button class="btn" type="submit" data-requires-js disabled>Set new password</button>
+    </form>
+    <div id="choose-done" hidden>
+      <p role="status">Your password was changed. <a href="/?mode=login">Sign in</a> with the new one.</p>
+    </div>
+  </div>
+</div>
+</main>
+<footer class="site-footer">
+  Waypoint is a portfolio project. The program catalog is sample data &mdash; always confirm deadlines on each program's official website.
+</footer>
+<div id="toasts" aria-live="polite"></div>
+</body>
+</html>

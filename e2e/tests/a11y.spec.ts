@@ -18,6 +18,11 @@ test("public pages have no serious accessibility violations", async ({ page }) =
   await page.goto("/recommend.html#token=not-a-real-token-but-long-enough");
   await expect(page.locator("#invite-error")).not.toBeEmpty();
   await audit(page, "recommend");
+  await page.goto("/reset.html");
+  await audit(page, "reset request");
+  await page.goto("/reset.html#token=not-a-real-token-but-long-enough");
+  await expect(page.getByRole("heading", { name: "Choose a new password" })).toBeVisible();
+  await audit(page, "reset choose");
 });
 
 test("student pages have no serious accessibility violations", async ({ page }) => {

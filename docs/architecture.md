@@ -206,8 +206,24 @@ a student returning to the dashboard after creating an application saw
   configured proxies. Invitation endpoints keep only the per-replica limit:
   tokens are 256-bit random, so guessing is not a threat the shared limit
   would address.
-- Invitation tokens travel in the URL fragment (`#token=`), which browsers never
-  send to servers, so they stay out of access logs and `Referer` headers.
+- Invitation and password-reset tokens travel in the URL fragment
+  (`#token=`), which browsers never send to servers, so they stay out of
+  access logs and `Referer` headers. Only their SHA-256 is stored.
+- Email (SMTP: Mailpit locally, SES in the Terraform) is sent by the
+  applications service while handling the request, not by an outbox worker:
+  the raw token exists only in that request, and outbox events are readable
+  by other services, so it is never persisted. A delivery failure never fails
+  the request (`email_sent=false`; the student can share the link). Subjects
+  carry user-supplied names, so header values are stripped of line breaks;
+  invitation emails are capped per student per day so the feature cannot be
+  used to mail arbitrary addresses at volume.
+- Password reset: the response is identical whether or not the email has an
+  account, and everything that depends on it (lookup, token write, email)
+  runs after the response, so timing does not tell either. Links last 30
+  minutes, work once, and are limited per address and per email. A reset
+  bumps the account's session epoch, which ends every existing session (the
+  session lookup reads the profile with strong consistency; gateways cache a
+  session for at most 5 seconds), and lifts a sign-in lockout.
 - Strict CSP (`script-src 'self'`, no inline scripts or styles), `nosniff`,
   `frame-ancestors 'none'`, `Referrer-Policy: same-origin`.
 - Forms post natively before JavaScript loads (progressive enhancement), so an

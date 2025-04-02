@@ -79,8 +79,10 @@ docker compose up --build
 Open <http://localhost:8080>, create a student account, or sign in as the
 counselor: `counselor@example.com` / `counselor-demo-password`.
 
-The stack: DynamoDB Local, the three services, the gateway, and a one-shot job
-that seeds ~40 sample programs.
+The stack: DynamoDB Local, the three services, the gateway, a one-shot job
+that seeds ~40 sample programs, and [Mailpit](https://mailpit.axllent.org),
+which catches the invitation and password-reset emails: open its inbox at
+<http://localhost:8025>.
 
 ## Development without Docker for the services
 
@@ -173,11 +175,12 @@ deploy/terraform/      AWS: DynamoDB, DAX, ECS Fargate, ALB, Cloud Map
 | `REGISTER_LIMIT_PER_IP` | `20` | applications (shared): sign-ups per address per sliding hour |
 | `CONSUMER_WORKERS` | `8` | parallel event appliers per stream (per-aggregate order kept) |
 | `BOOTSTRAP_COUNSELOR_EMAIL` / `_PASSWORD` | | creates the first counselor account |
+| `MAIL_MODE` | `log` | applications: `log` (development; refused in production) or `smtp` |
+| `SMTP_ADDR` / `SMTP_USERNAME` / `SMTP_PASSWORD` | | SMTP relay (Mailpit in compose, SES in the Terraform) |
+| `MAIL_FROM` | `Waypoint <no-reply@waypoint.local>` | sender of invitations and password resets |
 
 ## Known limitations
 
-- Recommendation invitations are not emailed: the student copies the link or
-  opens a prepared `mailto:`.
 - Program search filters the listing index in DynamoDB, which is fine for a
   catalog of a few thousand programs; a much larger catalog would use a search
   engine.

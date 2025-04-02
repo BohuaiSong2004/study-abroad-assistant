@@ -172,6 +172,8 @@ func (s *Server) routes() {
 	s.handle("POST /api/auth/register", s.register, s.rateLimit(s.authRL))
 	s.handle("POST /api/auth/login", s.login, s.rateLimit(s.authRL))
 	s.handle("POST /api/auth/logout", s.logout)
+	s.handle("POST /api/auth/password-reset", s.requestPasswordReset, s.rateLimit(s.authRL))
+	s.handle("POST /api/auth/password-reset/confirm", s.resetPassword, s.rateLimit(s.authRL))
 
 	// Catalog (public read, counselor write).
 	s.handle("GET /api/programs", s.listPrograms)
