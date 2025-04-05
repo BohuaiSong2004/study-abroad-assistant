@@ -16,6 +16,7 @@ import (
 )
 
 func main() {
+	platform.HealthcheckCommand()
 	b, err := svc.New("timeline", ddb.TableTimeline)
 	if err != nil {
 		svc.Fatal("timeline", err)

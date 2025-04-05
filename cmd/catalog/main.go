@@ -7,10 +7,12 @@ import (
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/catalog"
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/ddb"
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/events"
+	"github.com/BohuaiSong2004/study-abroad-assistant/internal/platform"
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/svc"
 )
 
 func main() {
+	platform.HealthcheckCommand()
 	b, err := svc.New("catalog", ddb.TableCatalog)
 	if err != nil {
 		svc.Fatal("catalog", err)

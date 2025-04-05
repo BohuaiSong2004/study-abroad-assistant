@@ -14,6 +14,7 @@ import (
 )
 
 func main() {
+	platform.HealthcheckCommand()
 	log := platform.NewLogger("gateway")
 	cfg, err := gateway.ConfigFromEnv()
 	if err != nil {

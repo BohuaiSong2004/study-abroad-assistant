@@ -18,6 +18,7 @@ import (
 )
 
 func main() {
+	platform.HealthcheckCommand()
 	b, err := svc.New("applications", ddb.TableApplications)
 	if err != nil {
 		svc.Fatal("applications", err)
