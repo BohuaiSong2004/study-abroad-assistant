@@ -11,9 +11,9 @@ import (
 
 // Metadata keys of the internal contract. The gateway authenticates the end
 // user (session cookie) and forwards who they are; services accept these
-// headers only from callers that present the shared internal token. In a
-// production deployment the token would be replaced by mTLS/service mesh
-// identity, but the services' authorization checks stay the same.
+// headers only from callers that present the shared internal token; with
+// GRPC_TLS_* set the transport is also mutual TLS (see tls.go), and the
+// token stays as a second check.
 const (
 	MDInternalToken = "x-waypoint-internal-token"
 	MDUserID        = "x-waypoint-user-id"

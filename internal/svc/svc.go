@@ -9,6 +9,8 @@ import (
 	"os"
 	"time"
 
+	"google.golang.org/grpc"
+
 	eventsv1 "github.com/BohuaiSong2004/study-abroad-assistant/gen/waypoint/events/v1"
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/ddb"
 	"github.com/BohuaiSong2004/study-abroad-assistant/internal/events"
@@ -69,10 +71,21 @@ func New(name string, tables ...string) (*Base, error) {
 	}
 	host, _ := os.Hostname()
 	token := InternalToken(log)
-	log.Info("starting", "cache_mode", cfg.CacheMode, "dynamodb_endpoint", cfg.Endpoint, "table_prefix", prefix)
+	var opts []grpc.ServerOption
+	tlsFiles := platform.TLSFromEnv()
+	if tlsFiles.Enabled() {
+		creds, err := tlsFiles.ServerCredentials()
+		if err != nil {
+			return nil, fmt.Errorf("grpc tls: %w", err)
+		}
+		opts = append(opts, grpc.Creds(creds))
+	} else if platform.Env("ENVIRONMENT", "") == "production" {
+		log.Warn("internal gRPC is plaintext; set GRPC_TLS_* or terminate TLS in a service mesh")
+	}
+	log.Info("starting", "cache_mode", cfg.CacheMode, "dynamodb_endpoint", cfg.Endpoint, "table_prefix", prefix, "grpc_mtls", tlsFiles.Enabled())
 	return &Base{
 		Name: name, Log: log, DB: db, Prefix: prefix, Token: token,
-		GRPC:  platform.NewGRPCServer(log, token),
+		GRPC:  platform.NewGRPCServer(log, token, opts...),
 		Owner: fmt.Sprintf("%s-%s-%d", name, host, os.Getpid()),
 	}, nil
 }

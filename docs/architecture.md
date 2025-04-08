@@ -20,9 +20,19 @@ services as gRPC metadata (`x-waypoint-user-id`, `x-waypoint-user-role`). The
 services accept that metadata only together with a shared internal token
 (`INTERNAL_TOKEN`, from Secrets Manager in the Terraform), and enforce
 authorization themselves: a student's data lives under `pk=STUDENT#<id>`, so
-every query is scoped to the caller structurally. In a larger deployment the
-token would be replaced by mTLS identities; the services' checks would not
-change.
+every query is scoped to the caller structurally.
+
+Transport: with `GRPC_TLS_CA/CERT/KEY` set, internal gRPC uses **mutual TLS
+1.3**: servers require a client certificate from the CA, clients verify the
+server's name, and a partial configuration is an error rather than a silent
+fallback to plaintext. Renewed leaf certificates are picked up without a
+restart. The docker compose stack runs this way, with a one-shot `certs` job
+(`cmd/devcerts`) issuing a throwaway CA and one certificate per service into
+a shared volume; a plaintext client on that network is refused. The internal
+token is still checked on top. Dev mode (`scripts/dev.sh`, localhost) stays
+plaintext. The Terraform does not issue certificates yet: on ECS the next
+step would be AWS Private CA (or ECS Service Connect TLS); until then the
+services log a warning when they run in production without TLS.
 
 ## Data model (single-table design)
 

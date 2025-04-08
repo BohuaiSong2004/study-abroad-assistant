@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
@@ -45,7 +46,7 @@ type GRPCServer struct {
 // NewGRPCServer builds a server with recovery, internal-auth, request-id,
 // logging and Prometheus interceptors. internalToken may be empty only in
 // tests.
-func NewGRPCServer(log *slog.Logger, internalToken string) *GRPCServer {
+func NewGRPCServer(log *slog.Logger, internalToken string, opts ...grpc.ServerOption) *GRPCServer {
 	authUnary := func(ctx context.Context, req any, info *grpc.UnaryServerInfo, h grpc.UnaryHandler) (any, error) {
 		if isHealth(info.FullMethod) {
 			return h(ctx, req)
@@ -93,12 +94,12 @@ func NewGRPCServer(log *slog.Logger, internalToken string) *GRPCServer {
 		}()
 		return h(srv, ss)
 	}
-	s := grpc.NewServer(
+	s := grpc.NewServer(append([]grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(serverMetrics.UnaryServerInterceptor(), recoverUnary, authUnary),
 		grpc.ChainStreamInterceptor(serverMetrics.StreamServerInterceptor(), recoverStream, authStream),
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{MinTime: 10 * time.Second, PermitWithoutStream: true}),
 		grpc.KeepaliveParams(keepalive.ServerParameters{Time: 30 * time.Second, Timeout: 10 * time.Second}),
-	)
+	}, opts...)...)
 	hs := health.NewServer()
 	healthpb.RegisterHealthServer(s, hs)
 	if EnvBool("GRPC_REFLECTION", false) {
@@ -204,12 +205,16 @@ func serviceConfig(unaryTimeout time.Duration) string {
 
 // DialOptions are the client options every connection uses; tests use them
 // with an in-memory dialer so they exercise the production configuration.
-func DialOptions(internalToken string, unaryTimeout time.Duration) []grpc.DialOption {
+// creds nil means plaintext (development, tests).
+func DialOptions(internalToken string, unaryTimeout time.Duration, creds credentials.TransportCredentials) []grpc.DialOption {
 	if unaryTimeout <= 0 {
 		unaryTimeout = 10 * time.Second
 	}
+	if creds == nil {
+		creds = insecure.NewCredentials()
+	}
 	return []grpc.DialOption{
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithTransportCredentials(creds),
 		grpc.WithDefaultServiceConfig(serviceConfig(unaryTimeout)),
 		grpc.WithChainUnaryInterceptor(clientMetrics.UnaryClientInterceptor(), ClientUnaryInterceptor(internalToken)),
 		grpc.WithChainStreamInterceptor(clientMetrics.StreamClientInterceptor(), ClientStreamInterceptor(internalToken)),
@@ -226,8 +231,18 @@ func DialOptions(internalToken string, unaryTimeout time.Duration) []grpc.DialOp
 // Dial creates a client connection that propagates the internal token,
 // request id and principal on every call. Use "dns:///host:port" targets for
 // client-side round-robin across replicas.
+//
+// With GRPC_TLS_* set the connection uses mutual TLS (see TLSFiles).
 func Dial(target, internalToken string) (*grpc.ClientConn, error) {
-	return grpc.NewClient(target, DialOptions(internalToken, EnvDuration("GRPC_CLIENT_TIMEOUT", 10*time.Second))...)
+	var creds credentials.TransportCredentials
+	if f := TLSFromEnv(); f.Enabled() {
+		c, err := f.ClientCredentials()
+		if err != nil {
+			return nil, err
+		}
+		creds = c
+	}
+	return grpc.NewClient(target, DialOptions(internalToken, EnvDuration("GRPC_CLIENT_TIMEOUT", 10*time.Second), creds)...)
 }
 
 // ClientUnaryInterceptor attaches the internal contract metadata.

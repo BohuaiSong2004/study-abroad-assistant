@@ -166,6 +166,12 @@ jobs:
           echo "catalog has $n programs"; [ "$n" -ge 38 ]
           curl -fsS http://localhost:8080/ | grep -q '<title>Waypoint'
           curl -fsS http://localhost:8080/api/session | jq -e '.authenticated == false'
+      - name: Internal gRPC uses mutual TLS
+        run: |
+          docker compose logs catalog | grep -q '"grpc_mtls":true'
+          docker compose run --build --rm ctl status
+          # A plaintext client on the same network is refused.
+          ! docker compose run --rm -e GRPC_TLS_CA= -e GRPC_TLS_CERT= -e GRPC_TLS_KEY= -e WAYPOINTCTL_TIMEOUT=5s ctl status
       - name: Logs
         if: always()
         run: docker compose logs --no-color | tail -200

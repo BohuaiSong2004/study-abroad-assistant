@@ -26,7 +26,7 @@ func Server(t testing.TB, register func(s *grpc.Server)) *grpc.ClientConn {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	go func() { _ = srv.ServeListener(ctx, lis); close(done) }()
-	opts := append(platform.DialOptions(InternalToken, UnaryTimeout),
+	opts := append(platform.DialOptions(InternalToken, UnaryTimeout, nil),
 		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) { return lis.DialContext(ctx) }))
 	cc, err := grpc.NewClient("passthrough:///bufnet", opts...)
 	if err != nil {

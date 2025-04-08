@@ -146,7 +146,7 @@ Every service also exposes `/metrics` (Prometheus), `/healthz` and
 
 ```
 proto/                 gRPC API definitions (buf)       gen/  generated Go code
-cmd/                   catalog, applications, timeline, gateway, seed, waypointctl (ops CLI)
+cmd/                   catalog, applications, timeline, gateway, seed, waypointctl (ops CLI), devcerts
 internal/
   catalog/ applications/ timeline/   service implementations
   events/              outbox, Subscribe server, consumer, leases, watermark
@@ -167,6 +167,7 @@ deploy/terraform/      AWS: DynamoDB, DAX, ECS Fargate, ALB, Cloud Map
 | `CACHE_MODE` | `local` | `off`, `local` (in-process cache), `daxsim` (local cache with DAX semantics, for tests) or `dax` |
 | `DAX_ENDPOINT` | | `daxs://…` cluster endpoint when `CACHE_MODE=dax` |
 | `INTERNAL_TOKEN` | dev value | shared secret between gateway and services (required in production) |
+| `GRPC_TLS_CA` / `_CERT` / `_KEY` | | mutual TLS for internal gRPC (set in docker compose; all three or none) |
 | `PUBLIC_URL` | `http://localhost:8080` | origin used for invitation links and the CSRF check |
 | `TRUSTED_PROXIES` | | CIDRs whose `X-Forwarded-For` is trusted (the load balancer) |
 | `AUTH_RATE_PER_MIN` | `20` | gateway (per replica): sign-in/sign-up attempts per client IP per minute |
