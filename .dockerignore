@@ -1,0 +1,11 @@
+.git
+bin
+e2e/node_modules
+e2e/test-results
+e2e/playwright-report
+deploy/terraform/.terraform
+loadtest/results
+coverage.out
+*.test
+docker-compose.override.yml
+Dockerfile.sandbox

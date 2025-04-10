@@ -1,0 +1,86 @@
+# Full stack on DynamoDB Local:  docker compose up --build
+# Then open http://localhost:8080 (counselor: counselor@example.com / counselor-demo-password).
+name: waypoint
+
+x-service: &service
+  restart: unless-stopped
+  environment: &env
+    DYNAMODB_ENDPOINT: http://dynamodb:8000
+    AWS_REGION: us-east-1
+    TABLE_PREFIX: waypoint-
+    CACHE_MODE: ${CACHE_MODE:-local}
+    INTERNAL_TOKEN: ${INTERNAL_TOKEN:-compose-internal-token}
+    CATALOG_ADDR: dns:///catalog:9091
+    APPLICATIONS_ADDR: dns:///applications:9092
+    TIMELINE_ADDR: dns:///timeline:9093
+    LOG_FORMAT: json
+  healthcheck: &health
+    test: ["CMD", "/app", "healthcheck"]
+    interval: 5s
+    timeout: 3s
+    retries: 20
+    start_period: 5s
+
+services:
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+    ports: ["8000:8000"]
+    restart: unless-stopped
+
+  catalog:
+    <<: *service
+    build: { context: ., args: { SERVICE: catalog } }
+    environment:
+      <<: *env
+      GRPC_ADDR: ":9091"
+      ADMIN_ADDR: ":9101"
+    depends_on: [dynamodb]
+
+  applications:
+    <<: *service
+    build: { context: ., args: { SERVICE: applications } }
+    environment:
+      <<: *env
+      GRPC_ADDR: ":9092"
+      ADMIN_ADDR: ":9102"
+      BOOTSTRAP_COUNSELOR_EMAIL: ${BOOTSTRAP_COUNSELOR_EMAIL:-counselor@example.com}
+      BOOTSTRAP_COUNSELOR_PASSWORD: ${BOOTSTRAP_COUNSELOR_PASSWORD:-counselor-demo-password}
+    depends_on:
+      dynamodb: { condition: service_started }
+      catalog: { condition: service_healthy }
+
+  timeline:
+    <<: *service
+    build: { context: ., args: { SERVICE: timeline } }
+    environment:
+      <<: *env
+      GRPC_ADDR: ":9093"
+      ADMIN_ADDR: ":9103"
+    depends_on:
+      catalog: { condition: service_healthy }
+      applications: { condition: service_healthy }
+
+  gateway:
+    <<: *service
+    build: { context: ., args: { SERVICE: gateway } }
+    environment:
+      <<: *env
+      HTTP_ADDR: ":8080"
+      ADMIN_ADDR: ":8081"
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8080}
+      # The limiter stays on; the threshold allows the e2e suite's sign-ups.
+      AUTH_RATE_PER_MIN: ${AUTH_RATE_PER_MIN:-300}
+    ports: ["8080:8080"]
+    depends_on:
+      catalog: { condition: service_healthy }
+      applications: { condition: service_healthy }
+      timeline: { condition: service_healthy }
+
+  seed:
+    build: { context: ., args: { SERVICE: seed } }
+    environment:
+      <<: *env
+    depends_on:
+      catalog: { condition: service_healthy }
+    restart: "no"

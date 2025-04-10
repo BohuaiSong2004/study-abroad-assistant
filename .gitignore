@@ -26,3 +26,4 @@ deploy/terraform/.terraform.lock.hcl.bak
 loadtest/results/
 /tmp/
 .DS_Store
+sandbox-ca.crt
