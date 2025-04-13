@@ -49,6 +49,15 @@ enum MilestoneSource {
   MILESTONE_SOURCE_CUSTOM = 2;
 }
 
+// Text is the machine-readable form of a generated sentence, so clients can
+// show it in the user's language. The English rendering stays in the plain
+// string fields (fallback, XML export). Codes are stable; args are raw
+// values (enum names without prefix, integers, ISO dates, names).
+message Text {
+  string code = 1;
+  map<string, string> args = 2;
+}
+
 message Milestone {
   // Generated milestones have stable ids ("gen:sop", "gen:rec:<id>") so a
   // re-plan updates them in place; custom ones are "c:<id>".
@@ -63,6 +72,9 @@ message Milestone {
   // Computed at read time: not done and due_date is before today in the
   // program's time zone.
   bool overdue = 8;
+  // Set for generated milestones (custom ones are the student's own words).
+  Text title_text = 9;
+  Text description_text = 10;
 }
 
 message Timeline {
@@ -80,6 +92,8 @@ message Timeline {
   waypoint.applications.v1.ApplicationStatus application_status = 11;
   repeated Milestone milestones = 12;
   repeated string warnings = 13;
+  // warnings, structured (same order).
+  repeated Text warning_texts = 18;
   int64 version = 14;
   int64 application_version = 15;
   int64 program_version = 16;

@@ -285,6 +285,23 @@ type milestoneDTO struct {
 	// Document is set for generated milestones backed by a checklist item:
 	// completing them means ticking that item on the application.
 	Document string `json:"document,omitempty"`
+	// TitleText and DescriptionText let the UI localize generated text.
+	TitleText       *textDTO `json:"titleText,omitempty"`
+	DescriptionText *textDTO `json:"descriptionText,omitempty"`
+}
+
+// textDTO is a localizable generated sentence: a stable code plus raw
+// arguments (see timelinev1.Text).
+type textDTO struct {
+	Code string            `json:"code"`
+	Args map[string]string `json:"args,omitempty"`
+}
+
+func textOut(t *timelinev1.Text) *textDTO {
+	if t == nil || t.Code == "" {
+		return nil
+	}
+	return &textDTO{Code: t.Code, Args: t.Args}
 }
 
 type progressDTO struct {
@@ -306,6 +323,7 @@ type timelineDTO struct {
 	ApplicationStatus string         `json:"applicationStatus"`
 	Milestones        []milestoneDTO `json:"milestones"`
 	Warnings          []string       `json:"warnings"`
+	WarningTexts      []textDTO      `json:"warningTexts"`
 	Progress          progressDTO    `json:"progress"`
 	Version           int64          `json:"version"`
 	// ApplicationVersion is the application version the timeline was planned
@@ -323,6 +341,7 @@ func milestoneOut(m *timelinev1.Milestone) milestoneDTO {
 	if d, ok := milestoneDoc[m.Id]; ok {
 		out.Document = docName(d)
 	}
+	out.TitleText, out.DescriptionText = textOut(m.TitleText), textOut(m.DescriptionText)
 	return out
 }
 
@@ -332,7 +351,12 @@ func timelineOut(t *timelinev1.Timeline) timelineDTO {
 		Intake: t.Intake, Round: roundName(t.Round), EffectiveRound: roundName(t.EffectiveRound),
 		RoundLabel: timeline.RoundLabel(t.EffectiveRound), Deadline: t.Deadline, Timezone: t.Timezone,
 		ApplicationStatus: statusName(t.ApplicationStatus), Version: t.Version, ApplicationVersion: t.ApplicationVersion, UpdatedAt: ts(t.UpdatedAt),
-		Milestones: []milestoneDTO{}, Warnings: append([]string{}, t.Warnings...),
+		Milestones: []milestoneDTO{}, Warnings: append([]string{}, t.Warnings...), WarningTexts: []textDTO{},
+	}
+	for _, w := range t.WarningTexts {
+		if d := textOut(w); d != nil {
+			out.WarningTexts = append(out.WarningTexts, *d)
+		}
 	}
 	for _, m := range t.Milestones {
 		out.Milestones = append(out.Milestones, milestoneOut(m))

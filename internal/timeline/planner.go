@@ -6,6 +6,7 @@ package timeline
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -110,11 +111,12 @@ func Plan(p *catalogv1.Program, a *appsv1.Application, prev *timelinev1.Timeline
 		}
 		deadline, _ = civil.Parse(pick.Date)
 		eff = pick.Round
-		t.Warnings = append(t.Warnings, fmt.Sprintf("The %s round is no longer offered; planning for %s (%s).", RoundLabel(a.Round), RoundLabel(eff), pick.Date))
+		warn(t, fmt.Sprintf("The %s round is no longer offered; planning for %s (%s).", RoundLabel(a.Round), RoundLabel(eff), pick.Date),
+			text("warn.round-gone", "asked", round(a.Round), "planned", round(eff), "date", pick.Date))
 	}
 	t.EffectiveRound = eff
 	if deadline.IsZero() {
-		t.Warnings = append(t.Warnings, "This program has no deadlines yet.")
+		warn(t, "This program has no deadlines yet.", text("warn.no-deadlines"))
 		t.Milestones = customOnly(prev)
 		return t
 	}
@@ -133,12 +135,12 @@ func Plan(p *catalogv1.Program, a *appsv1.Application, prev *timelinev1.Timeline
 			continue
 		}
 		m := &timelinev1.Milestone{Id: rule.id, Kind: rule.kind, Source: timelinev1.MilestoneSource_MILESTONE_SOURCE_GENERATED,
-			Title: rule.title, DueDate: due(rule.lead), Done: done[d]}
+			Title: rule.title, TitleText: text("ms." + strings.TrimPrefix(rule.id, "gen:")), DueDate: due(rule.lead), Done: done[d]}
 		switch d {
 		case catalogv1.DocumentType_DOCUMENT_TYPE_ENGLISH_SCORES:
-			m.Description = englishRequirement(req)
+			m.Description, m.DescriptionText = englishRequirement(req)
 		case catalogv1.DocumentType_DOCUMENT_TYPE_GRE_SCORES:
-			m.Description = "Official GRE score report sent from ETS."
+			m.Description, m.DescriptionText = "Official GRE score report sent from ETS.", text("desc.gre")
 		}
 		ms = append(ms, m)
 	}
@@ -154,7 +156,7 @@ func Plan(p *catalogv1.Program, a *appsv1.Application, prev *timelinev1.Timeline
 			ms = append(ms, &timelinev1.Milestone{
 				Id: "gen:rec:" + r.Id, Kind: timelinev1.MilestoneKind_MILESTONE_KIND_RECOMMENDATION,
 				Source: timelinev1.MilestoneSource_MILESTONE_SOURCE_GENERATED,
-				Title:  "Letter from " + r.RecommenderName, DueDate: due(LeadLetters),
+				Title:  "Letter from " + r.RecommenderName, TitleText: text("ms.letter", "name", r.RecommenderName), DueDate: due(LeadLetters),
 				Done: r.Status == appsv1.RecommendationStatus_RECOMMENDATION_STATUS_SUBMITTED,
 			})
 		case appsv1.RecommendationStatus_RECOMMENDATION_STATUS_DECLINED:
@@ -169,52 +171,94 @@ func Plan(p *catalogv1.Program, a *appsv1.Application, prev *timelinev1.Timeline
 		}
 		if missing := need - activeCount; missing > 0 {
 			m.Title = fmt.Sprintf("Ask %d more recommender%s", missing, plural(missing))
+			m.TitleText = text("ms.ask-more", "n", strconv.Itoa(missing))
 			m.Description = fmt.Sprintf("This program requires %d letter%s.", need, plural(need))
+			m.DescriptionText = text("desc.letters-required", "n", strconv.Itoa(need))
 			if len(declined) > 0 {
-				t.Warnings = append(t.Warnings, fmt.Sprintf("%s declined to write a letter; ask someone else.", strings.Join(declined, " and ")))
+				// names: one per line, so clients can join them in their language.
+				warn(t, fmt.Sprintf("%s declined to write a letter; ask someone else.", strings.Join(declined, " and ")),
+					text("warn.declined", "names", strings.Join(declined, "\n")))
 			}
 		} else {
 			m.Title = fmt.Sprintf("Request %d recommendation letter%s", need, plural(need))
+			m.TitleText = text("ms.request-letters", "n", strconv.Itoa(need))
 		}
 		ms = append(ms, m)
 	}
 
 	sub := &timelinev1.Milestone{
 		Id: "gen:submit", Kind: timelinev1.MilestoneKind_MILESTONE_KIND_SUBMISSION,
-		Source: timelinev1.MilestoneSource_MILESTONE_SOURCE_GENERATED,
-		Title:  fmt.Sprintf("Submit application (%s deadline)", RoundLabel(eff)), DueDate: deadline.String(),
+		Source:    timelinev1.MilestoneSource_MILESTONE_SOURCE_GENERATED,
+		Title:     fmt.Sprintf("Submit application (%s deadline)", RoundLabel(eff)),
+		TitleText: text("ms.submit", "round", round(eff)), DueDate: deadline.String(),
 		Done: submitted[a.Status],
 	}
 	if p.ApplicationFeeCents > 0 {
 		sub.Description = fmt.Sprintf("Application fee: %d.%02d %s", p.ApplicationFeeCents/100, p.ApplicationFeeCents%100, p.Currency)
+		// Hundredths of the currency unit, as in the catalog; clients format it.
+		sub.DescriptionText = text("desc.fee", "amount_cents", strconv.FormatInt(p.ApplicationFeeCents, 10), "currency", p.Currency)
 	}
 	ms = append(ms, sub, &timelinev1.Milestone{
 		Id: "gen:decision", Kind: timelinev1.MilestoneKind_MILESTONE_KIND_DECISION,
 		Source: timelinev1.MilestoneSource_MILESTONE_SOURCE_GENERATED,
-		Title:  "Decision expected (estimate)", DueDate: deadline.AddDays(DecisionEstimateDays).String(),
-		Description: "Estimate only: many programs decide 8-12 weeks after the deadline.",
-		Done:        decided[a.Status],
+		Title:  "Decision expected (estimate)", TitleText: text("ms.decision"), DueDate: deadline.AddDays(DecisionEstimateDays).String(),
+		Description: "Estimate only: many programs decide 8-12 weeks after the deadline.", DescriptionText: text("desc.decision"),
+		Done: decided[a.Status],
 	})
 	if a.Status == appsv1.ApplicationStatus_APPLICATION_STATUS_WITHDRAWN {
-		t.Warnings = append(t.Warnings, "You withdrew this application.")
+		warn(t, "You withdrew this application.", text("warn.withdrawn"))
 	}
 	t.Milestones = append(ms, customOnly(prev)...)
 	SortMilestones(t.Milestones)
 	return t
 }
 
-func englishRequirement(r *catalogv1.Requirements) string {
+func englishRequirement(r *catalogv1.Requirements) (string, *timelinev1.Text) {
 	var parts []string
+	var kv []string
 	if r.MinToefl > 0 {
 		parts = append(parts, fmt.Sprintf("TOEFL iBT %d+", r.MinToefl))
+		kv = append(kv, "toefl", strconv.Itoa(int(r.MinToefl)))
 	}
 	if r.MinIeltsTenths > 0 {
-		parts = append(parts, fmt.Sprintf("IELTS %d.%d+", r.MinIeltsTenths/10, r.MinIeltsTenths%10))
+		ielts := fmt.Sprintf("%d.%d", r.MinIeltsTenths/10, r.MinIeltsTenths%10)
+		parts = append(parts, "IELTS "+ielts+"+")
+		kv = append(kv, "ielts", ielts)
 	}
 	if len(parts) == 0 {
-		return ""
+		return "", nil
 	}
-	return "Minimum: " + strings.Join(parts, " or ") + "."
+	variant := "both"
+	switch {
+	case r.MinIeltsTenths == 0:
+		variant = "toefl"
+	case r.MinToefl == 0:
+		variant = "ielts"
+	}
+	return "Minimum: " + strings.Join(parts, " or ") + ".", text("desc.english-"+variant, kv...)
+}
+
+// text builds a structured Text from a code and key/value pairs.
+func text(code string, kv ...string) *timelinev1.Text {
+	t := &timelinev1.Text{Code: code}
+	if len(kv) > 0 {
+		t.Args = make(map[string]string, len(kv)/2)
+		for i := 0; i+1 < len(kv); i += 2 {
+			t.Args[kv[i]] = kv[i+1]
+		}
+	}
+	return t
+}
+
+// warn adds a warning in both forms.
+func warn(t *timelinev1.Timeline, english string, structured *timelinev1.Text) {
+	t.Warnings = append(t.Warnings, english)
+	t.WarningTexts = append(t.WarningTexts, structured)
+}
+
+// round is the enum value without its prefix ("ROUND_1"), as Text args use.
+func round(r catalogv1.RoundKind) string {
+	return strings.TrimPrefix(r.String(), "ROUND_KIND_")
 }
 
 func customOnly(prev *timelinev1.Timeline) []*timelinev1.Milestone {

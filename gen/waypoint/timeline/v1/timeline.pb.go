@@ -134,6 +134,62 @@ func (MilestoneSource) EnumDescriptor() ([]byte, []int) {
 	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{1}
 }
 
+// Text is the machine-readable form of a generated sentence, so clients can
+// show it in the user's language. The English rendering stays in the plain
+// string fields (fallback, XML export). Codes are stable; args are raw
+// values (enum names without prefix, integers, ISO dates, names).
+type Text struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	Args          map[string]string      `protobuf:"bytes,2,rep,name=args,proto3" json:"args,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Text) Reset() {
+	*x = Text{}
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Text) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Text) ProtoMessage() {}
+
+func (x *Text) ProtoReflect() protoreflect.Message {
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Text.ProtoReflect.Descriptor instead.
+func (*Text) Descriptor() ([]byte, []int) {
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *Text) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *Text) GetArgs() map[string]string {
+	if x != nil {
+		return x.Args
+	}
+	return nil
+}
+
 type Milestone struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Generated milestones have stable ids ("gen:sop", "gen:rec:<id>") so a
@@ -148,14 +204,17 @@ type Milestone struct {
 	Done    bool   `protobuf:"varint,7,opt,name=done,proto3" json:"done,omitempty"`
 	// Computed at read time: not done and due_date is before today in the
 	// program's time zone.
-	Overdue       bool `protobuf:"varint,8,opt,name=overdue,proto3" json:"overdue,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Overdue bool `protobuf:"varint,8,opt,name=overdue,proto3" json:"overdue,omitempty"`
+	// Set for generated milestones (custom ones are the student's own words).
+	TitleText       *Text `protobuf:"bytes,9,opt,name=title_text,json=titleText,proto3" json:"title_text,omitempty"`
+	DescriptionText *Text `protobuf:"bytes,10,opt,name=description_text,json=descriptionText,proto3" json:"description_text,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *Milestone) Reset() {
 	*x = Milestone{}
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[0]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -167,7 +226,7 @@ func (x *Milestone) String() string {
 func (*Milestone) ProtoMessage() {}
 
 func (x *Milestone) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[0]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -180,7 +239,7 @@ func (x *Milestone) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Milestone.ProtoReflect.Descriptor instead.
 func (*Milestone) Descriptor() ([]byte, []int) {
-	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{0}
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *Milestone) GetId() string {
@@ -239,6 +298,20 @@ func (x *Milestone) GetOverdue() bool {
 	return false
 }
 
+func (x *Milestone) GetTitleText() *Text {
+	if x != nil {
+		return x.TitleText
+	}
+	return nil
+}
+
+func (x *Milestone) GetDescriptionText() *Text {
+	if x != nil {
+		return x.DescriptionText
+	}
+	return nil
+}
+
 type Timeline struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ApplicationId string                 `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
@@ -249,12 +322,14 @@ type Timeline struct {
 	Intake        string                 `protobuf:"bytes,6,opt,name=intake,proto3" json:"intake,omitempty"`
 	Round         v1.RoundKind           `protobuf:"varint,7,opt,name=round,proto3,enum=waypoint.catalog.v1.RoundKind" json:"round,omitempty"`
 	// The round actually used (differs from round when that round was removed).
-	EffectiveRound     v1.RoundKind           `protobuf:"varint,8,opt,name=effective_round,json=effectiveRound,proto3,enum=waypoint.catalog.v1.RoundKind" json:"effective_round,omitempty"`
-	Deadline           string                 `protobuf:"bytes,9,opt,name=deadline,proto3" json:"deadline,omitempty"`
-	Timezone           string                 `protobuf:"bytes,10,opt,name=timezone,proto3" json:"timezone,omitempty"`
-	ApplicationStatus  v11.ApplicationStatus  `protobuf:"varint,11,opt,name=application_status,json=applicationStatus,proto3,enum=waypoint.applications.v1.ApplicationStatus" json:"application_status,omitempty"`
-	Milestones         []*Milestone           `protobuf:"bytes,12,rep,name=milestones,proto3" json:"milestones,omitempty"`
-	Warnings           []string               `protobuf:"bytes,13,rep,name=warnings,proto3" json:"warnings,omitempty"`
+	EffectiveRound    v1.RoundKind          `protobuf:"varint,8,opt,name=effective_round,json=effectiveRound,proto3,enum=waypoint.catalog.v1.RoundKind" json:"effective_round,omitempty"`
+	Deadline          string                `protobuf:"bytes,9,opt,name=deadline,proto3" json:"deadline,omitempty"`
+	Timezone          string                `protobuf:"bytes,10,opt,name=timezone,proto3" json:"timezone,omitempty"`
+	ApplicationStatus v11.ApplicationStatus `protobuf:"varint,11,opt,name=application_status,json=applicationStatus,proto3,enum=waypoint.applications.v1.ApplicationStatus" json:"application_status,omitempty"`
+	Milestones        []*Milestone          `protobuf:"bytes,12,rep,name=milestones,proto3" json:"milestones,omitempty"`
+	Warnings          []string              `protobuf:"bytes,13,rep,name=warnings,proto3" json:"warnings,omitempty"`
+	// warnings, structured (same order).
+	WarningTexts       []*Text                `protobuf:"bytes,18,rep,name=warning_texts,json=warningTexts,proto3" json:"warning_texts,omitempty"`
 	Version            int64                  `protobuf:"varint,14,opt,name=version,proto3" json:"version,omitempty"`
 	ApplicationVersion int64                  `protobuf:"varint,15,opt,name=application_version,json=applicationVersion,proto3" json:"application_version,omitempty"`
 	ProgramVersion     int64                  `protobuf:"varint,16,opt,name=program_version,json=programVersion,proto3" json:"program_version,omitempty"`
@@ -265,7 +340,7 @@ type Timeline struct {
 
 func (x *Timeline) Reset() {
 	*x = Timeline{}
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[1]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -277,7 +352,7 @@ func (x *Timeline) String() string {
 func (*Timeline) ProtoMessage() {}
 
 func (x *Timeline) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[1]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -290,7 +365,7 @@ func (x *Timeline) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Timeline.ProtoReflect.Descriptor instead.
 func (*Timeline) Descriptor() ([]byte, []int) {
-	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{1}
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Timeline) GetApplicationId() string {
@@ -384,6 +459,13 @@ func (x *Timeline) GetWarnings() []string {
 	return nil
 }
 
+func (x *Timeline) GetWarningTexts() []*Text {
+	if x != nil {
+		return x.WarningTexts
+	}
+	return nil
+}
+
 func (x *Timeline) GetVersion() int64 {
 	if x != nil {
 		return x.Version
@@ -425,7 +507,7 @@ type GetTimelineRequest struct {
 
 func (x *GetTimelineRequest) Reset() {
 	*x = GetTimelineRequest{}
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[2]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -437,7 +519,7 @@ func (x *GetTimelineRequest) String() string {
 func (*GetTimelineRequest) ProtoMessage() {}
 
 func (x *GetTimelineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[2]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -450,7 +532,7 @@ func (x *GetTimelineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTimelineRequest.ProtoReflect.Descriptor instead.
 func (*GetTimelineRequest) Descriptor() ([]byte, []int) {
-	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{2}
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GetTimelineRequest) GetApplicationId() string {
@@ -479,7 +561,7 @@ type ListTimelinesRequest struct {
 
 func (x *ListTimelinesRequest) Reset() {
 	*x = ListTimelinesRequest{}
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[3]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -491,7 +573,7 @@ func (x *ListTimelinesRequest) String() string {
 func (*ListTimelinesRequest) ProtoMessage() {}
 
 func (x *ListTimelinesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[3]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -504,7 +586,7 @@ func (x *ListTimelinesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTimelinesRequest.ProtoReflect.Descriptor instead.
 func (*ListTimelinesRequest) Descriptor() ([]byte, []int) {
-	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{3}
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ListTimelinesRequest) GetConsistent() bool {
@@ -523,7 +605,7 @@ type ListTimelinesResponse struct {
 
 func (x *ListTimelinesResponse) Reset() {
 	*x = ListTimelinesResponse{}
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[4]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -535,7 +617,7 @@ func (x *ListTimelinesResponse) String() string {
 func (*ListTimelinesResponse) ProtoMessage() {}
 
 func (x *ListTimelinesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[4]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -548,7 +630,7 @@ func (x *ListTimelinesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTimelinesResponse.ProtoReflect.Descriptor instead.
 func (*ListTimelinesResponse) Descriptor() ([]byte, []int) {
-	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{4}
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ListTimelinesResponse) GetTimelines() []*Timeline {
@@ -577,7 +659,7 @@ type GetAgendaRequest struct {
 
 func (x *GetAgendaRequest) Reset() {
 	*x = GetAgendaRequest{}
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[5]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -589,7 +671,7 @@ func (x *GetAgendaRequest) String() string {
 func (*GetAgendaRequest) ProtoMessage() {}
 
 func (x *GetAgendaRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[5]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -602,7 +684,7 @@ func (x *GetAgendaRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAgendaRequest.ProtoReflect.Descriptor instead.
 func (*GetAgendaRequest) Descriptor() ([]byte, []int) {
-	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{5}
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetAgendaRequest) GetFrom() string {
@@ -652,7 +734,7 @@ type AgendaItem struct {
 
 func (x *AgendaItem) Reset() {
 	*x = AgendaItem{}
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[6]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -664,7 +746,7 @@ func (x *AgendaItem) String() string {
 func (*AgendaItem) ProtoMessage() {}
 
 func (x *AgendaItem) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[6]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -677,7 +759,7 @@ func (x *AgendaItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgendaItem.ProtoReflect.Descriptor instead.
 func (*AgendaItem) Descriptor() ([]byte, []int) {
-	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{6}
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *AgendaItem) GetApplicationId() string {
@@ -717,7 +799,7 @@ type GetAgendaResponse struct {
 
 func (x *GetAgendaResponse) Reset() {
 	*x = GetAgendaResponse{}
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[7]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -729,7 +811,7 @@ func (x *GetAgendaResponse) String() string {
 func (*GetAgendaResponse) ProtoMessage() {}
 
 func (x *GetAgendaResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[7]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -742,7 +824,7 @@ func (x *GetAgendaResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAgendaResponse.ProtoReflect.Descriptor instead.
 func (*GetAgendaResponse) Descriptor() ([]byte, []int) {
-	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{7}
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetAgendaResponse) GetItems() []*AgendaItem {
@@ -764,7 +846,7 @@ type AddMilestoneRequest struct {
 
 func (x *AddMilestoneRequest) Reset() {
 	*x = AddMilestoneRequest{}
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[8]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -776,7 +858,7 @@ func (x *AddMilestoneRequest) String() string {
 func (*AddMilestoneRequest) ProtoMessage() {}
 
 func (x *AddMilestoneRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[8]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -789,7 +871,7 @@ func (x *AddMilestoneRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddMilestoneRequest.ProtoReflect.Descriptor instead.
 func (*AddMilestoneRequest) Descriptor() ([]byte, []int) {
-	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{8}
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *AddMilestoneRequest) GetApplicationId() string {
@@ -834,7 +916,7 @@ type UpdateMilestoneRequest struct {
 
 func (x *UpdateMilestoneRequest) Reset() {
 	*x = UpdateMilestoneRequest{}
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[9]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -846,7 +928,7 @@ func (x *UpdateMilestoneRequest) String() string {
 func (*UpdateMilestoneRequest) ProtoMessage() {}
 
 func (x *UpdateMilestoneRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[9]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -859,7 +941,7 @@ func (x *UpdateMilestoneRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMilestoneRequest.ProtoReflect.Descriptor instead.
 func (*UpdateMilestoneRequest) Descriptor() ([]byte, []int) {
-	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{9}
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UpdateMilestoneRequest) GetApplicationId() string {
@@ -914,7 +996,7 @@ type DeleteMilestoneRequest struct {
 
 func (x *DeleteMilestoneRequest) Reset() {
 	*x = DeleteMilestoneRequest{}
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[10]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -926,7 +1008,7 @@ func (x *DeleteMilestoneRequest) String() string {
 func (*DeleteMilestoneRequest) ProtoMessage() {}
 
 func (x *DeleteMilestoneRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[10]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -939,7 +1021,7 @@ func (x *DeleteMilestoneRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMilestoneRequest.ProtoReflect.Descriptor instead.
 func (*DeleteMilestoneRequest) Descriptor() ([]byte, []int) {
-	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{10}
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DeleteMilestoneRequest) GetApplicationId() string {
@@ -964,7 +1046,7 @@ type GetSyncStatusRequest struct {
 
 func (x *GetSyncStatusRequest) Reset() {
 	*x = GetSyncStatusRequest{}
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[11]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -976,7 +1058,7 @@ func (x *GetSyncStatusRequest) String() string {
 func (*GetSyncStatusRequest) ProtoMessage() {}
 
 func (x *GetSyncStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[11]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -989,7 +1071,7 @@ func (x *GetSyncStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSyncStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetSyncStatusRequest) Descriptor() ([]byte, []int) {
-	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{11}
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{12}
 }
 
 type StreamStatus struct {
@@ -1009,7 +1091,7 @@ type StreamStatus struct {
 
 func (x *StreamStatus) Reset() {
 	*x = StreamStatus{}
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[12]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1021,7 +1103,7 @@ func (x *StreamStatus) String() string {
 func (*StreamStatus) ProtoMessage() {}
 
 func (x *StreamStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[12]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1034,7 +1116,7 @@ func (x *StreamStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamStatus.ProtoReflect.Descriptor instead.
 func (*StreamStatus) Descriptor() ([]byte, []int) {
-	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{12}
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *StreamStatus) GetStream() string {
@@ -1107,7 +1189,7 @@ type DeadLetter struct {
 
 func (x *DeadLetter) Reset() {
 	*x = DeadLetter{}
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[13]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1119,7 +1201,7 @@ func (x *DeadLetter) String() string {
 func (*DeadLetter) ProtoMessage() {}
 
 func (x *DeadLetter) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[13]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1132,7 +1214,7 @@ func (x *DeadLetter) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeadLetter.ProtoReflect.Descriptor instead.
 func (*DeadLetter) Descriptor() ([]byte, []int) {
-	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{13}
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *DeadLetter) GetConsumer() string {
@@ -1188,7 +1270,7 @@ type ListDeadLettersRequest struct {
 
 func (x *ListDeadLettersRequest) Reset() {
 	*x = ListDeadLettersRequest{}
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[14]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1200,7 +1282,7 @@ func (x *ListDeadLettersRequest) String() string {
 func (*ListDeadLettersRequest) ProtoMessage() {}
 
 func (x *ListDeadLettersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[14]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1213,7 +1295,7 @@ func (x *ListDeadLettersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDeadLettersRequest.ProtoReflect.Descriptor instead.
 func (*ListDeadLettersRequest) Descriptor() ([]byte, []int) {
-	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{14}
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ListDeadLettersRequest) GetConsumer() string {
@@ -1239,7 +1321,7 @@ type ListDeadLettersResponse struct {
 
 func (x *ListDeadLettersResponse) Reset() {
 	*x = ListDeadLettersResponse{}
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[15]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1251,7 +1333,7 @@ func (x *ListDeadLettersResponse) String() string {
 func (*ListDeadLettersResponse) ProtoMessage() {}
 
 func (x *ListDeadLettersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[15]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1264,7 +1346,7 @@ func (x *ListDeadLettersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDeadLettersResponse.ProtoReflect.Descriptor instead.
 func (*ListDeadLettersResponse) Descriptor() ([]byte, []int) {
-	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{15}
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ListDeadLettersResponse) GetDeadLetters() []*DeadLetter {
@@ -1284,7 +1366,7 @@ type ReplayDeadLetterRequest struct {
 
 func (x *ReplayDeadLetterRequest) Reset() {
 	*x = ReplayDeadLetterRequest{}
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[16]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1296,7 +1378,7 @@ func (x *ReplayDeadLetterRequest) String() string {
 func (*ReplayDeadLetterRequest) ProtoMessage() {}
 
 func (x *ReplayDeadLetterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[16]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1309,7 +1391,7 @@ func (x *ReplayDeadLetterRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReplayDeadLetterRequest.ProtoReflect.Descriptor instead.
 func (*ReplayDeadLetterRequest) Descriptor() ([]byte, []int) {
-	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{16}
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ReplayDeadLetterRequest) GetConsumer() string {
@@ -1338,7 +1420,7 @@ type ReplayDeadLetterResponse struct {
 
 func (x *ReplayDeadLetterResponse) Reset() {
 	*x = ReplayDeadLetterResponse{}
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[17]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1350,7 +1432,7 @@ func (x *ReplayDeadLetterResponse) String() string {
 func (*ReplayDeadLetterResponse) ProtoMessage() {}
 
 func (x *ReplayDeadLetterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[17]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1363,7 +1445,7 @@ func (x *ReplayDeadLetterResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReplayDeadLetterResponse.ProtoReflect.Descriptor instead.
 func (*ReplayDeadLetterResponse) Descriptor() ([]byte, []int) {
-	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{17}
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ReplayDeadLetterResponse) GetApplied() bool {
@@ -1390,7 +1472,7 @@ type ResyncRequest struct {
 
 func (x *ResyncRequest) Reset() {
 	*x = ResyncRequest{}
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[18]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1402,7 +1484,7 @@ func (x *ResyncRequest) String() string {
 func (*ResyncRequest) ProtoMessage() {}
 
 func (x *ResyncRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[18]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1415,7 +1497,7 @@ func (x *ResyncRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResyncRequest.ProtoReflect.Descriptor instead.
 func (*ResyncRequest) Descriptor() ([]byte, []int) {
-	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{18}
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ResyncRequest) GetStudentId() string {
@@ -1435,7 +1517,7 @@ type ResyncResponse struct {
 
 func (x *ResyncResponse) Reset() {
 	*x = ResyncResponse{}
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[19]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1447,7 +1529,7 @@ func (x *ResyncResponse) String() string {
 func (*ResyncResponse) ProtoMessage() {}
 
 func (x *ResyncResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[19]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1460,7 +1542,7 @@ func (x *ResyncResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResyncResponse.ProtoReflect.Descriptor instead.
 func (*ResyncResponse) Descriptor() ([]byte, []int) {
-	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{19}
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ResyncResponse) GetTimelines() int64 {
@@ -1486,7 +1568,7 @@ type GetSyncStatusResponse struct {
 
 func (x *GetSyncStatusResponse) Reset() {
 	*x = GetSyncStatusResponse{}
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[20]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1498,7 +1580,7 @@ func (x *GetSyncStatusResponse) String() string {
 func (*GetSyncStatusResponse) ProtoMessage() {}
 
 func (x *GetSyncStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[20]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1511,7 +1593,7 @@ func (x *GetSyncStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSyncStatusResponse.ProtoReflect.Descriptor instead.
 func (*GetSyncStatusResponse) Descriptor() ([]byte, []int) {
-	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{20}
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *GetSyncStatusResponse) GetStreams() []*StreamStatus {
@@ -1533,7 +1615,7 @@ type TimelineChanged struct {
 
 func (x *TimelineChanged) Reset() {
 	*x = TimelineChanged{}
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[21]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1545,7 +1627,7 @@ func (x *TimelineChanged) String() string {
 func (*TimelineChanged) ProtoMessage() {}
 
 func (x *TimelineChanged) ProtoReflect() protoreflect.Message {
-	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[21]
+	mi := &file_waypoint_timeline_v1_timeline_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1558,7 +1640,7 @@ func (x *TimelineChanged) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TimelineChanged.ProtoReflect.Descriptor instead.
 func (*TimelineChanged) Descriptor() ([]byte, []int) {
-	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{21}
+	return file_waypoint_timeline_v1_timeline_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *TimelineChanged) GetApplicationId() string {
@@ -1593,7 +1675,13 @@ var File_waypoint_timeline_v1_timeline_proto protoreflect.FileDescriptor
 
 const file_waypoint_timeline_v1_timeline_proto_rawDesc = "" +
 	"\n" +
-	"#waypoint/timeline/v1/timeline.proto\x12\x14waypoint.timeline.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a+waypoint/applications/v1/applications.proto\x1a!waypoint/catalog/v1/catalog.proto\"\x94\x02\n" +
+	"#waypoint/timeline/v1/timeline.proto\x12\x14waypoint.timeline.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a+waypoint/applications/v1/applications.proto\x1a!waypoint/catalog/v1/catalog.proto\"\x8d\x01\n" +
+	"\x04Text\x12\x12\n" +
+	"\x04code\x18\x01 \x01(\tR\x04code\x128\n" +
+	"\x04args\x18\x02 \x03(\v2$.waypoint.timeline.v1.Text.ArgsEntryR\x04args\x1a7\n" +
+	"\tArgsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x96\x03\n" +
 	"\tMilestone\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x127\n" +
 	"\x04kind\x18\x02 \x01(\x0e2#.waypoint.timeline.v1.MilestoneKindR\x04kind\x12=\n" +
@@ -1602,7 +1690,11 @@ const file_waypoint_timeline_v1_timeline_proto_rawDesc = "" +
 	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x19\n" +
 	"\bdue_date\x18\x06 \x01(\tR\adueDate\x12\x12\n" +
 	"\x04done\x18\a \x01(\bR\x04done\x12\x18\n" +
-	"\aoverdue\x18\b \x01(\bR\aoverdue\"\xe9\x05\n" +
+	"\aoverdue\x18\b \x01(\bR\aoverdue\x129\n" +
+	"\n" +
+	"title_text\x18\t \x01(\v2\x1a.waypoint.timeline.v1.TextR\ttitleText\x12E\n" +
+	"\x10description_text\x18\n" +
+	" \x01(\v2\x1a.waypoint.timeline.v1.TextR\x0fdescriptionText\"\xaa\x06\n" +
 	"\bTimeline\x12%\n" +
 	"\x0eapplication_id\x18\x01 \x01(\tR\rapplicationId\x12\x1d\n" +
 	"\n" +
@@ -1623,7 +1715,8 @@ const file_waypoint_timeline_v1_timeline_proto_rawDesc = "" +
 	"\n" +
 	"milestones\x18\f \x03(\v2\x1f.waypoint.timeline.v1.MilestoneR\n" +
 	"milestones\x12\x1a\n" +
-	"\bwarnings\x18\r \x03(\tR\bwarnings\x12\x18\n" +
+	"\bwarnings\x18\r \x03(\tR\bwarnings\x12?\n" +
+	"\rwarning_texts\x18\x12 \x03(\v2\x1a.waypoint.timeline.v1.TextR\fwarningTexts\x12\x18\n" +
 	"\aversion\x18\x0e \x01(\x03R\aversion\x12/\n" +
 	"\x13application_version\x18\x0f \x01(\x03R\x12applicationVersion\x12'\n" +
 	"\x0fprogram_version\x18\x10 \x01(\x03R\x0eprogramVersion\x129\n" +
@@ -1759,76 +1852,82 @@ func file_waypoint_timeline_v1_timeline_proto_rawDescGZIP() []byte {
 }
 
 var file_waypoint_timeline_v1_timeline_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_waypoint_timeline_v1_timeline_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_waypoint_timeline_v1_timeline_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_waypoint_timeline_v1_timeline_proto_goTypes = []any{
 	(MilestoneKind)(0),               // 0: waypoint.timeline.v1.MilestoneKind
 	(MilestoneSource)(0),             // 1: waypoint.timeline.v1.MilestoneSource
-	(*Milestone)(nil),                // 2: waypoint.timeline.v1.Milestone
-	(*Timeline)(nil),                 // 3: waypoint.timeline.v1.Timeline
-	(*GetTimelineRequest)(nil),       // 4: waypoint.timeline.v1.GetTimelineRequest
-	(*ListTimelinesRequest)(nil),     // 5: waypoint.timeline.v1.ListTimelinesRequest
-	(*ListTimelinesResponse)(nil),    // 6: waypoint.timeline.v1.ListTimelinesResponse
-	(*GetAgendaRequest)(nil),         // 7: waypoint.timeline.v1.GetAgendaRequest
-	(*AgendaItem)(nil),               // 8: waypoint.timeline.v1.AgendaItem
-	(*GetAgendaResponse)(nil),        // 9: waypoint.timeline.v1.GetAgendaResponse
-	(*AddMilestoneRequest)(nil),      // 10: waypoint.timeline.v1.AddMilestoneRequest
-	(*UpdateMilestoneRequest)(nil),   // 11: waypoint.timeline.v1.UpdateMilestoneRequest
-	(*DeleteMilestoneRequest)(nil),   // 12: waypoint.timeline.v1.DeleteMilestoneRequest
-	(*GetSyncStatusRequest)(nil),     // 13: waypoint.timeline.v1.GetSyncStatusRequest
-	(*StreamStatus)(nil),             // 14: waypoint.timeline.v1.StreamStatus
-	(*DeadLetter)(nil),               // 15: waypoint.timeline.v1.DeadLetter
-	(*ListDeadLettersRequest)(nil),   // 16: waypoint.timeline.v1.ListDeadLettersRequest
-	(*ListDeadLettersResponse)(nil),  // 17: waypoint.timeline.v1.ListDeadLettersResponse
-	(*ReplayDeadLetterRequest)(nil),  // 18: waypoint.timeline.v1.ReplayDeadLetterRequest
-	(*ReplayDeadLetterResponse)(nil), // 19: waypoint.timeline.v1.ReplayDeadLetterResponse
-	(*ResyncRequest)(nil),            // 20: waypoint.timeline.v1.ResyncRequest
-	(*ResyncResponse)(nil),           // 21: waypoint.timeline.v1.ResyncResponse
-	(*GetSyncStatusResponse)(nil),    // 22: waypoint.timeline.v1.GetSyncStatusResponse
-	(*TimelineChanged)(nil),          // 23: waypoint.timeline.v1.TimelineChanged
-	(v1.RoundKind)(0),                // 24: waypoint.catalog.v1.RoundKind
-	(v11.ApplicationStatus)(0),       // 25: waypoint.applications.v1.ApplicationStatus
-	(*timestamppb.Timestamp)(nil),    // 26: google.protobuf.Timestamp
+	(*Text)(nil),                     // 2: waypoint.timeline.v1.Text
+	(*Milestone)(nil),                // 3: waypoint.timeline.v1.Milestone
+	(*Timeline)(nil),                 // 4: waypoint.timeline.v1.Timeline
+	(*GetTimelineRequest)(nil),       // 5: waypoint.timeline.v1.GetTimelineRequest
+	(*ListTimelinesRequest)(nil),     // 6: waypoint.timeline.v1.ListTimelinesRequest
+	(*ListTimelinesResponse)(nil),    // 7: waypoint.timeline.v1.ListTimelinesResponse
+	(*GetAgendaRequest)(nil),         // 8: waypoint.timeline.v1.GetAgendaRequest
+	(*AgendaItem)(nil),               // 9: waypoint.timeline.v1.AgendaItem
+	(*GetAgendaResponse)(nil),        // 10: waypoint.timeline.v1.GetAgendaResponse
+	(*AddMilestoneRequest)(nil),      // 11: waypoint.timeline.v1.AddMilestoneRequest
+	(*UpdateMilestoneRequest)(nil),   // 12: waypoint.timeline.v1.UpdateMilestoneRequest
+	(*DeleteMilestoneRequest)(nil),   // 13: waypoint.timeline.v1.DeleteMilestoneRequest
+	(*GetSyncStatusRequest)(nil),     // 14: waypoint.timeline.v1.GetSyncStatusRequest
+	(*StreamStatus)(nil),             // 15: waypoint.timeline.v1.StreamStatus
+	(*DeadLetter)(nil),               // 16: waypoint.timeline.v1.DeadLetter
+	(*ListDeadLettersRequest)(nil),   // 17: waypoint.timeline.v1.ListDeadLettersRequest
+	(*ListDeadLettersResponse)(nil),  // 18: waypoint.timeline.v1.ListDeadLettersResponse
+	(*ReplayDeadLetterRequest)(nil),  // 19: waypoint.timeline.v1.ReplayDeadLetterRequest
+	(*ReplayDeadLetterResponse)(nil), // 20: waypoint.timeline.v1.ReplayDeadLetterResponse
+	(*ResyncRequest)(nil),            // 21: waypoint.timeline.v1.ResyncRequest
+	(*ResyncResponse)(nil),           // 22: waypoint.timeline.v1.ResyncResponse
+	(*GetSyncStatusResponse)(nil),    // 23: waypoint.timeline.v1.GetSyncStatusResponse
+	(*TimelineChanged)(nil),          // 24: waypoint.timeline.v1.TimelineChanged
+	nil,                              // 25: waypoint.timeline.v1.Text.ArgsEntry
+	(v1.RoundKind)(0),                // 26: waypoint.catalog.v1.RoundKind
+	(v11.ApplicationStatus)(0),       // 27: waypoint.applications.v1.ApplicationStatus
+	(*timestamppb.Timestamp)(nil),    // 28: google.protobuf.Timestamp
 }
 var file_waypoint_timeline_v1_timeline_proto_depIdxs = []int32{
-	0,  // 0: waypoint.timeline.v1.Milestone.kind:type_name -> waypoint.timeline.v1.MilestoneKind
-	1,  // 1: waypoint.timeline.v1.Milestone.source:type_name -> waypoint.timeline.v1.MilestoneSource
-	24, // 2: waypoint.timeline.v1.Timeline.round:type_name -> waypoint.catalog.v1.RoundKind
-	24, // 3: waypoint.timeline.v1.Timeline.effective_round:type_name -> waypoint.catalog.v1.RoundKind
-	25, // 4: waypoint.timeline.v1.Timeline.application_status:type_name -> waypoint.applications.v1.ApplicationStatus
-	2,  // 5: waypoint.timeline.v1.Timeline.milestones:type_name -> waypoint.timeline.v1.Milestone
-	26, // 6: waypoint.timeline.v1.Timeline.updated_at:type_name -> google.protobuf.Timestamp
-	3,  // 7: waypoint.timeline.v1.ListTimelinesResponse.timelines:type_name -> waypoint.timeline.v1.Timeline
-	2,  // 8: waypoint.timeline.v1.AgendaItem.milestone:type_name -> waypoint.timeline.v1.Milestone
-	8,  // 9: waypoint.timeline.v1.GetAgendaResponse.items:type_name -> waypoint.timeline.v1.AgendaItem
-	26, // 10: waypoint.timeline.v1.StreamStatus.last_event_at:type_name -> google.protobuf.Timestamp
-	26, // 11: waypoint.timeline.v1.DeadLetter.parked_at:type_name -> google.protobuf.Timestamp
-	15, // 12: waypoint.timeline.v1.ListDeadLettersResponse.dead_letters:type_name -> waypoint.timeline.v1.DeadLetter
-	14, // 13: waypoint.timeline.v1.GetSyncStatusResponse.streams:type_name -> waypoint.timeline.v1.StreamStatus
-	16, // 14: waypoint.timeline.v1.SyncAdminService.ListDeadLetters:input_type -> waypoint.timeline.v1.ListDeadLettersRequest
-	18, // 15: waypoint.timeline.v1.SyncAdminService.ReplayDeadLetter:input_type -> waypoint.timeline.v1.ReplayDeadLetterRequest
-	20, // 16: waypoint.timeline.v1.SyncAdminService.Resync:input_type -> waypoint.timeline.v1.ResyncRequest
-	4,  // 17: waypoint.timeline.v1.TimelineService.GetTimeline:input_type -> waypoint.timeline.v1.GetTimelineRequest
-	5,  // 18: waypoint.timeline.v1.TimelineService.ListTimelines:input_type -> waypoint.timeline.v1.ListTimelinesRequest
-	7,  // 19: waypoint.timeline.v1.TimelineService.GetAgenda:input_type -> waypoint.timeline.v1.GetAgendaRequest
-	10, // 20: waypoint.timeline.v1.TimelineService.AddMilestone:input_type -> waypoint.timeline.v1.AddMilestoneRequest
-	11, // 21: waypoint.timeline.v1.TimelineService.UpdateMilestone:input_type -> waypoint.timeline.v1.UpdateMilestoneRequest
-	12, // 22: waypoint.timeline.v1.TimelineService.DeleteMilestone:input_type -> waypoint.timeline.v1.DeleteMilestoneRequest
-	13, // 23: waypoint.timeline.v1.TimelineService.GetSyncStatus:input_type -> waypoint.timeline.v1.GetSyncStatusRequest
-	17, // 24: waypoint.timeline.v1.SyncAdminService.ListDeadLetters:output_type -> waypoint.timeline.v1.ListDeadLettersResponse
-	19, // 25: waypoint.timeline.v1.SyncAdminService.ReplayDeadLetter:output_type -> waypoint.timeline.v1.ReplayDeadLetterResponse
-	21, // 26: waypoint.timeline.v1.SyncAdminService.Resync:output_type -> waypoint.timeline.v1.ResyncResponse
-	3,  // 27: waypoint.timeline.v1.TimelineService.GetTimeline:output_type -> waypoint.timeline.v1.Timeline
-	6,  // 28: waypoint.timeline.v1.TimelineService.ListTimelines:output_type -> waypoint.timeline.v1.ListTimelinesResponse
-	9,  // 29: waypoint.timeline.v1.TimelineService.GetAgenda:output_type -> waypoint.timeline.v1.GetAgendaResponse
-	3,  // 30: waypoint.timeline.v1.TimelineService.AddMilestone:output_type -> waypoint.timeline.v1.Timeline
-	3,  // 31: waypoint.timeline.v1.TimelineService.UpdateMilestone:output_type -> waypoint.timeline.v1.Timeline
-	3,  // 32: waypoint.timeline.v1.TimelineService.DeleteMilestone:output_type -> waypoint.timeline.v1.Timeline
-	22, // 33: waypoint.timeline.v1.TimelineService.GetSyncStatus:output_type -> waypoint.timeline.v1.GetSyncStatusResponse
-	24, // [24:34] is the sub-list for method output_type
-	14, // [14:24] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	25, // 0: waypoint.timeline.v1.Text.args:type_name -> waypoint.timeline.v1.Text.ArgsEntry
+	0,  // 1: waypoint.timeline.v1.Milestone.kind:type_name -> waypoint.timeline.v1.MilestoneKind
+	1,  // 2: waypoint.timeline.v1.Milestone.source:type_name -> waypoint.timeline.v1.MilestoneSource
+	2,  // 3: waypoint.timeline.v1.Milestone.title_text:type_name -> waypoint.timeline.v1.Text
+	2,  // 4: waypoint.timeline.v1.Milestone.description_text:type_name -> waypoint.timeline.v1.Text
+	26, // 5: waypoint.timeline.v1.Timeline.round:type_name -> waypoint.catalog.v1.RoundKind
+	26, // 6: waypoint.timeline.v1.Timeline.effective_round:type_name -> waypoint.catalog.v1.RoundKind
+	27, // 7: waypoint.timeline.v1.Timeline.application_status:type_name -> waypoint.applications.v1.ApplicationStatus
+	3,  // 8: waypoint.timeline.v1.Timeline.milestones:type_name -> waypoint.timeline.v1.Milestone
+	2,  // 9: waypoint.timeline.v1.Timeline.warning_texts:type_name -> waypoint.timeline.v1.Text
+	28, // 10: waypoint.timeline.v1.Timeline.updated_at:type_name -> google.protobuf.Timestamp
+	4,  // 11: waypoint.timeline.v1.ListTimelinesResponse.timelines:type_name -> waypoint.timeline.v1.Timeline
+	3,  // 12: waypoint.timeline.v1.AgendaItem.milestone:type_name -> waypoint.timeline.v1.Milestone
+	9,  // 13: waypoint.timeline.v1.GetAgendaResponse.items:type_name -> waypoint.timeline.v1.AgendaItem
+	28, // 14: waypoint.timeline.v1.StreamStatus.last_event_at:type_name -> google.protobuf.Timestamp
+	28, // 15: waypoint.timeline.v1.DeadLetter.parked_at:type_name -> google.protobuf.Timestamp
+	16, // 16: waypoint.timeline.v1.ListDeadLettersResponse.dead_letters:type_name -> waypoint.timeline.v1.DeadLetter
+	15, // 17: waypoint.timeline.v1.GetSyncStatusResponse.streams:type_name -> waypoint.timeline.v1.StreamStatus
+	17, // 18: waypoint.timeline.v1.SyncAdminService.ListDeadLetters:input_type -> waypoint.timeline.v1.ListDeadLettersRequest
+	19, // 19: waypoint.timeline.v1.SyncAdminService.ReplayDeadLetter:input_type -> waypoint.timeline.v1.ReplayDeadLetterRequest
+	21, // 20: waypoint.timeline.v1.SyncAdminService.Resync:input_type -> waypoint.timeline.v1.ResyncRequest
+	5,  // 21: waypoint.timeline.v1.TimelineService.GetTimeline:input_type -> waypoint.timeline.v1.GetTimelineRequest
+	6,  // 22: waypoint.timeline.v1.TimelineService.ListTimelines:input_type -> waypoint.timeline.v1.ListTimelinesRequest
+	8,  // 23: waypoint.timeline.v1.TimelineService.GetAgenda:input_type -> waypoint.timeline.v1.GetAgendaRequest
+	11, // 24: waypoint.timeline.v1.TimelineService.AddMilestone:input_type -> waypoint.timeline.v1.AddMilestoneRequest
+	12, // 25: waypoint.timeline.v1.TimelineService.UpdateMilestone:input_type -> waypoint.timeline.v1.UpdateMilestoneRequest
+	13, // 26: waypoint.timeline.v1.TimelineService.DeleteMilestone:input_type -> waypoint.timeline.v1.DeleteMilestoneRequest
+	14, // 27: waypoint.timeline.v1.TimelineService.GetSyncStatus:input_type -> waypoint.timeline.v1.GetSyncStatusRequest
+	18, // 28: waypoint.timeline.v1.SyncAdminService.ListDeadLetters:output_type -> waypoint.timeline.v1.ListDeadLettersResponse
+	20, // 29: waypoint.timeline.v1.SyncAdminService.ReplayDeadLetter:output_type -> waypoint.timeline.v1.ReplayDeadLetterResponse
+	22, // 30: waypoint.timeline.v1.SyncAdminService.Resync:output_type -> waypoint.timeline.v1.ResyncResponse
+	4,  // 31: waypoint.timeline.v1.TimelineService.GetTimeline:output_type -> waypoint.timeline.v1.Timeline
+	7,  // 32: waypoint.timeline.v1.TimelineService.ListTimelines:output_type -> waypoint.timeline.v1.ListTimelinesResponse
+	10, // 33: waypoint.timeline.v1.TimelineService.GetAgenda:output_type -> waypoint.timeline.v1.GetAgendaResponse
+	4,  // 34: waypoint.timeline.v1.TimelineService.AddMilestone:output_type -> waypoint.timeline.v1.Timeline
+	4,  // 35: waypoint.timeline.v1.TimelineService.UpdateMilestone:output_type -> waypoint.timeline.v1.Timeline
+	4,  // 36: waypoint.timeline.v1.TimelineService.DeleteMilestone:output_type -> waypoint.timeline.v1.Timeline
+	23, // 37: waypoint.timeline.v1.TimelineService.GetSyncStatus:output_type -> waypoint.timeline.v1.GetSyncStatusResponse
+	28, // [28:38] is the sub-list for method output_type
+	18, // [18:28] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_waypoint_timeline_v1_timeline_proto_init() }
@@ -1836,14 +1935,14 @@ func file_waypoint_timeline_v1_timeline_proto_init() {
 	if File_waypoint_timeline_v1_timeline_proto != nil {
 		return
 	}
-	file_waypoint_timeline_v1_timeline_proto_msgTypes[9].OneofWrappers = []any{}
+	file_waypoint_timeline_v1_timeline_proto_msgTypes[10].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_waypoint_timeline_v1_timeline_proto_rawDesc), len(file_waypoint_timeline_v1_timeline_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   22,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   2,
 		},
