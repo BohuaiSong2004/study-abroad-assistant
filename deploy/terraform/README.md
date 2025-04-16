@@ -1,0 +1,34 @@
+# AWS deployment (Terraform)
+
+Provisions the production shape of Waypoint. **It has been validated
+(`terraform validate`, run in CI) but not applied**: this portfolio project is
+not running on AWS, so there are no production measurements of DAX.
+
+| Piece | Resources |
+| --- | --- |
+| Network | VPC across 2-3 AZs, public/private subnets, NAT gateway, DynamoDB gateway endpoint |
+| Data | 3 DynamoDB tables (on-demand, PITR, SSE, TTL) — one per service, same schema as `internal/ddb/tables.go` |
+| Cache | DAX cluster (TLS endpoint, encryption at rest, 3 nodes), TTLs mirroring the local cache |
+| Compute | ECS Fargate services for gateway, catalog, applications, timeline; CPU target tracking |
+| Discovery | Cloud Map private DNS; gRPC clients use `dns:///` + round robin |
+| Edge | ALB (HTTP, or HTTPS with an ACM certificate) → gateway |
+| Security | Per-service IAM task roles limited to the service's own table + DAX; internal token and bootstrap password in Secrets Manager; read-only root filesystems |
+| Images | ECR repositories with scan-on-push, immutable tags |
+
+```sh
+cd deploy/terraform
+terraform init
+terraform plan -var environment=staging -var image_tag=$(git rev-parse --short HEAD)
+```
+
+Push images first (tags are immutable):
+
+```sh
+for s in gateway catalog applications timeline seed; do
+  docker build --build-arg SERVICE=$s -t <account>.dkr.ecr.<region>.amazonaws.com/waypoint-staging/$s:<tag> ../..
+  docker push <account>.dkr.ecr.<region>.amazonaws.com/waypoint-staging/$s:<tag>
+done
+```
+
+Seed the catalog with a one-off task of the `seed` image (same environment as
+the catalog service).
