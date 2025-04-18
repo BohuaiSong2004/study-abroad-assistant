@@ -105,7 +105,7 @@ test("anonymous visitors can browse and are sent to sign up to apply", async ({ 
   await page.getByLabel("Search").fill(program.university);
   await page.getByRole("button", { name: "Search" }).click();
   const card = page.locator(".program", { hasText: program.university });
-  await expect(card).toContainText("TOEFL 100+ · IELTS 7.0+ · 2 letters · Fee 90.00 CAD");
+  await expect(card).toContainText("TOEFL 100+ · IELTS 7.0+ · 2 letters · Fee CA$90.00");
   await card.getByRole("button", { name: /Start application/ }).click();
   await page.waitForURL(/mode=register/);
 });

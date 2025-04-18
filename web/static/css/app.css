@@ -226,7 +226,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); }
 .agenda li { display: grid; grid-template-columns: 3.75rem 1fr; gap: .6rem; padding: .6rem 0; border-bottom: 1px solid var(--border); align-items: baseline; }
 .agenda .badge { display: block; margin-top: .2rem; font-size: .82rem; }
 .agenda li:last-child { border-bottom: 0; }
-.agenda time { font-variant-numeric: tabular-nums; color: var(--muted); font-size: .9rem; }
+.agenda time { font-variant-numeric: tabular-nums; color: var(--muted); font-size: .9rem; white-space: nowrap; }
+:lang(zh) .agenda li { grid-template-columns: 4.5rem 1fr; } /* "11月27日" is wider than "Nov 27" */
 .agenda .where { color: var(--muted); font-size: .85rem; display: block; }
 
 .timeline { list-style: none; margin: 0; padding: 0; position: relative; }
@@ -352,3 +353,11 @@ dialog.wide { max-width: 760px; }
   .skeleton .bar-line { animation: pulse 1.4s ease-in-out infinite; }
   @keyframes pulse { 50% { opacity: .55; } }
 }
+
+/* Chinese pages arrive hidden until js/common.js has translated them (see
+   internal/gateway/lang.go); the animation reveals the page after 2 s even
+   if no script runs, so a failure never leaves a blank screen. */
+html.i18n-pending body { visibility: hidden; animation: i18n-reveal 0s 2s forwards; }
+@keyframes i18n-reveal { to { visibility: visible; } }
+:lang(zh) body { font-family: system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif; }
+.lang-switch { white-space: nowrap; }

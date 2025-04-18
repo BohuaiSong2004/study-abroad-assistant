@@ -35,7 +35,7 @@ jQuery(function ($) {
 
   var mode = WP.param("mode") === "register" ? "register" : "login";
   select(mode);
-  if (WP.param("error")) $("#" + mode + "-error").text(WP.param("error"));
+  if (WP.param("error")) $("#" + mode + "-error").text(WP.tMsg(WP.param("error")));
 
   function submit($form, url, fields, $err) {
     $form.on("submit", function (e) {

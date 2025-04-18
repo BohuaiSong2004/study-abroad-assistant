@@ -40,9 +40,9 @@ jQuery(function ($) {
     var r = p.requirements, parts = [];
     if (r.minToefl) parts.push("TOEFL " + r.minToefl + "+");
     if (r.minIelts) parts.push("IELTS " + r.minIelts.toFixed(1) + "+");
-    if (r.greRequired) parts.push("GRE required");
-    if (r.recommendationsRequired) parts.push(r.recommendationsRequired + " letter" + (r.recommendationsRequired > 1 ? "s" : ""));
-    if (p.applicationFee) parts.push("Fee " + (p.applicationFee.amountCents / 100).toFixed(2) + " " + p.applicationFee.currency);
+    if (r.greRequired) parts.push(WP.t("GRE required"));
+    if (r.recommendationsRequired) parts.push(r.recommendationsRequired === 1 ? WP.t("1 letter") : WP.t("{n} letters", { n: r.recommendationsRequired }));
+    if (p.applicationFee) parts.push(WP.t("Fee {amount}", { amount: WP.money(p.applicationFee.amountCents, p.applicationFee.currency) }));
     return parts.join(" · ");
   }
 
@@ -52,16 +52,16 @@ jQuery(function ($) {
     $main.append($("<h2 class='m-0'></h2>").text(p.university));
     $main.append($("<p class='m-0'></p>").text(p.name));
     $main.append($("<p class='meta m-0'></p>").text((WP.labels.degree[p.degree] || p.degree) + " · " + p.field + " · " + [p.city, p.country].filter(Boolean).join(", ") + " · " + p.intake));
-    var $chips = $('<ul class="chips mt-075" aria-label="Application rounds"></ul>');
+    var $chips = $('<ul class="chips mt-075"></ul>').attr("aria-label", WP.t("Application rounds"));
     $.each(p.deadlines, function (_, d) {
-      var $c = $('<li class="pill"></li>').text(d.label + ": " + WP.fmtDate(d.date));
-      if (WP.daysUntil(d.date) < 0) $c.addClass("overdue").attr("title", "Passed");
+      var $c = $('<li class="pill"></li>').text((WP.labels.round[d.round] || d.label) + ": " + WP.fmtDate(d.date));
+      if (WP.daysUntil(d.date) < 0) $c.addClass("overdue").attr("title", WP.t("Passed"));
       $chips.append($c);
     });
     $main.append($chips);
     var $btn = tracked[p.id]
-      ? $('<a class="btn secondary cta">View application</a>').attr("href", "/application.html?id=" + encodeURIComponent(tracked[p.id]))
-      : $('<button type="button" class="btn cta">Start application</button>').attr("aria-label", "Start application: " + p.university + ", " + p.name).on("click", function () { openApply(p); });
+      ? $('<a class="btn secondary cta"></a>').text(WP.t("View application")).attr("href", "/application.html?id=" + encodeURIComponent(tracked[p.id]))
+      : $('<button type="button" class="btn cta"></button>').text(WP.t("Start application")).attr("aria-label", WP.t("Start application: {university}, {program}", { university: p.university, program: p.name })).on("click", function () { openApply(p); });
     $li.append($main, $btn, $("<p class='reqs m-0'></p>").text(reqSummary(p)));
     return $li;
   }
@@ -83,7 +83,8 @@ jQuery(function ($) {
       shown += res.programs.length;
       nextToken = res.nextPageToken;
       $("#more").prop("hidden", !nextToken);
-      $("#result-count").text(shown === 0 ? "No programs match your search." : "Showing " + shown + " program" + (shown === 1 ? "" : "s") + (nextToken ? " (more available)" : "") + ".");
+      $("#result-count").text(shown === 0 ? WP.t("No programs match your search.")
+        : WP.t(shown === 1 ? "Showing 1 program" : "Showing {n} programs", { n: shown }) + (nextToken ? " " + WP.t("(more available)") : "") + WP.t("."));
     }, function (err) { WP.toast(err.message, "error"); }).always(function () { $("#results").attr("aria-busy", "false"); });
   }
 
@@ -98,7 +99,7 @@ jQuery(function ($) {
       return;
     }
     if (account.role !== "student") {
-      WP.toast("Counselor accounts maintain the catalog; sign in as a student to track applications.", "error");
+      WP.toast(WP.t("Counselor accounts maintain the catalog; sign in as a student to track applications."), "error");
       return;
     }
     current = p;
@@ -110,7 +111,7 @@ jQuery(function ($) {
       var passed = WP.daysUntil(d.date) < 0;
       var $in = $('<input type="radio" name="round" required>').val(d.round).attr("id", "round-" + i);
       if (!passed && !picked) { $in.prop("checked", true); picked = true; }
-      $r.append($("<label>").attr("for", "round-" + i).append($in, $("<span>").text(d.label + " — " + WP.fmtDate(d.date) + (passed ? " (passed)" : ""))));
+      $r.append($("<label>").attr("for", "round-" + i).append($in, $("<span>").text((WP.labels.round[d.round] || d.label) + " — " + WP.fmtDate(d.date) + (passed ? " " + WP.t("(passed)") : ""))));
     });
     if (!picked) $r.find("input").last().prop("checked", true);
     dialog.showModal();
@@ -122,7 +123,7 @@ jQuery(function ($) {
     WP.busy($("#apply-submit"), WP.api("POST", "/api/applications", { programId: current.id, round: round })).then(function (app) {
       window.location.assign("/application.html?id=" + encodeURIComponent(app.id));
     }, function (err) {
-      if (err.code === "already_exists") err.message = "You're already tracking this program. Find it on your dashboard.";
+      if (err.code === "already_exists") err.message = WP.t("You're already tracking this program. Find it on your dashboard.");
       WP.showError($("#apply-error"), err);
     });
   });

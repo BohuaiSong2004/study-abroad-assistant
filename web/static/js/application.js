@@ -38,7 +38,7 @@ jQuery(function ($) {
       if (err.status === 404) {
         missing = true;
         clearTimeout(pendingRetry);
-        $("#app-title").text("Application not found");
+        $("#app-title").text(WP.t("Application not found"));
         $("main .grid-2").prop("hidden", true);
       } else {
         WP.toast(err.message, "error");
@@ -63,11 +63,12 @@ jQuery(function ($) {
 
   function renderRounds() {
     var $r = $("#app-round").empty();
-    $.each(program.deadlines, function (_, d) { $r.append($("<option>").val(d.round).text(d.label + " — " + WP.fmtDate(d.date))); });
+    $.each(program.deadlines, function (_, d) { $r.append($("<option>").val(d.round).text((WP.labels.round[d.round] || d.label) + " — " + WP.fmtDate(d.date))); });
     $r.val(app.round);
-    $("#deadline-hint").text("Deadlines are in " + program.timezone + " time.");
+    $("#deadline-hint").text(WP.t("Deadlines are in {zone} time.", { zone: program.timezone }));
     var need = program.requirements.recommendationsRequired;
-    $("#recs-needed").text(need ? "This program requires " + need + " letter" + (need > 1 ? "s" : "") + "." : "This program doesn't require letters.");
+    $("#recs-needed").text(!need ? WP.t("This program doesn't require letters.")
+      : need === 1 ? WP.t("This program requires 1 letter.") : WP.t("This program requires {n} letters.", { n: need }));
   }
 
   var pendingRetry = null;
@@ -91,18 +92,19 @@ jQuery(function ($) {
   }
 
   function renderTimeline() {
-    $("#tl-progress").empty().append(WP.progressBar(tl.progress.done, tl.progress.total, "Timeline progress"));
-    $("#tl-progress-label").text(tl.progress.done + " of " + tl.progress.total + " done · " + tl.roundLabel + " deadline " + WP.fmtDate(tl.deadline));
+    $("#tl-progress").empty().append(WP.progressBar(tl.progress.done, tl.progress.total, WP.t("Timeline progress")));
+    $("#tl-progress-label").text(WP.t("{done} of {total} done", { done: tl.progress.done, total: tl.progress.total }) + " · " +
+      WP.t("{round} deadline {date}", { round: WP.roundLabel(tl), date: WP.fmtDate(tl.deadline) }));
     var $w = $("#warnings").empty();
-    $.each(tl.warnings, function (_, w) { $w.append($('<p class="warning" role="status"></p>').text(w)); });
+    $.each(WP.warnings(tl), function (_, w) { $w.append($('<p class="warning" role="status"></p>').text(w)); });
     var $list = $("#timeline").empty();
     $.each(tl.milestones, function (_, m) { $list.append(milestone(m)); });
   }
 
   var hints = {
-    recommendation: "Completes when the letter is submitted.",
-    submission: "Set the status to Submitted once you've applied.",
-    decision: "Estimate — update the status when you hear back."
+    recommendation: WP.t("Completes when the letter is submitted."),
+    submission: WP.t("Set the status to Submitted once you've applied."),
+    decision: WP.t("Estimate — update the status when you hear back.")
   };
 
   function milestone(m) {
@@ -110,27 +112,28 @@ jQuery(function ($) {
     if (m.done) $li.addClass("done");
     if (m.overdue) $li.addClass("overdue");
     var $body = $("<div>");
-    $body.append($('<div class="title"></div>').text(m.title));
-    if (m.description) $body.append($('<p class="desc"></p>').text(m.description));
+    $body.append($('<div class="title"></div>').text(WP.milestoneTitle(m)));
+    var desc = WP.milestoneDesc(m);
+    if (desc) $body.append($('<p class="desc"></p>').text(desc));
     var $controls = $('<div class="controls"></div>');
     var cbId = "ms-" + m.id.replace(/[^a-zA-Z0-9_-]/g, "_");
     if (m.document || m.source === "custom") {
       var $cb = $('<input type="checkbox">').attr("id", cbId).prop("checked", m.done);
-      $controls.append($("<label>").attr("for", cbId).append($cb, $("<span>").text(m.done ? "Done" : "Mark done")));
+      $controls.append($("<label>").attr("for", cbId).append($cb, $("<span>").text(m.done ? WP.t("Done") : WP.t("Mark done"))));
       $cb.on("change", function () { toggle(m, $cb.prop("checked"), $cb); });
     } else if (m.id === "gen:rec-request") {
-      $controls.append($('<span class="muted small"></span>').text(m.done ? "Enough recommenders asked." : "Ask someone in the Recommendation letters section below."));
+      $controls.append($('<span class="muted small"></span>').text(m.done ? WP.t("Enough recommenders asked.") : WP.t("Ask someone in the Recommendation letters section below.")));
     } else if (hints[m.kind]) {
       $controls.append($('<span class="muted small"></span>').text(hints[m.kind]));
     }
     if (m.source === "custom") {
-      $controls.append($('<button type="button" class="btn link small">Remove</button>').attr("aria-label", "Remove " + m.title).on("click", function () {
+      $controls.append($('<button type="button" class="btn link small"></button>').text(WP.t("Remove")).attr("aria-label", WP.t("Remove {title}", { title: m.title })).on("click", function () {
         WP.api("DELETE", base + "/milestones/" + encodeURIComponent(m.id)).then(function (t) { tl = t; renderTimeline(); }, function (err) { WP.toast(err.message, "error"); });
       }));
     }
     $body.append($controls);
     var $when = $('<div class="when"></div>').append($("<time>").attr("datetime", m.dueDate).text(WP.fmtDate(m.dueDate)));
-    if (m.overdue) $when.append($("<br>"), $('<span class="pill overdue">Overdue</span>'));
+    if (m.overdue) $when.append($("<br>"), $('<span class="pill overdue"></span>').text(WP.t("Overdue")));
     else if (!m.done && m.kind !== "decision") $when.append($("<br>"), $("<span>").text(WP.relative(m.dueDate)));
     $li.append($('<span class="dot" aria-hidden="true"></span>'), $body, $when);
     return $li;
@@ -138,7 +141,7 @@ jQuery(function ($) {
 
   function conflict(err) {
     if (err.code === "conflict") {
-      WP.toast("This application was updated elsewhere; showing the latest version.", "error");
+      WP.toast(WP.t("This application was updated elsewhere; showing the latest version."), "error");
       loadApp();
       return true;
     }
@@ -154,7 +157,7 @@ jQuery(function ($) {
       p = WP.api("PATCH", base, { version: app.version, checklist: [{ document: m.document, done: done }] }).then(function (a) {
         app = a;
         $cb.closest(".milestone").toggleClass("done", done);
-        $cb.next("span").text(done ? "Done" : "Mark done");
+        $cb.next("span").text(done ? WP.t("Done") : WP.t("Mark done"));
       });
     } else {
       p = WP.api("PATCH", base + "/milestones/" + encodeURIComponent(m.id), { done: done }).then(function (t) { tl = t; renderTimeline(); });
@@ -169,7 +172,7 @@ jQuery(function ($) {
     $err.text("");
     return WP.api("PATCH", base, $.extend({ version: app.version }, body)).then(function (a) {
       app = a;
-      WP.toast("Saved.");
+      WP.toast(WP.t("Saved."));
     }, function (err) {
       if (!conflict(err)) WP.showError($err, err);
       $("#app-status").val(app.status);
@@ -188,7 +191,7 @@ jQuery(function ($) {
       tl = t;
       renderTimeline();
       $("#milestone-form")[0].reset();
-      WP.toast("Milestone added.");
+      WP.toast(WP.t("Milestone added."));
     }, function (err) { WP.showError($err, err); });
   });
 
@@ -204,20 +207,21 @@ jQuery(function ($) {
     var inputId = "link-" + rec.id;
     var $box = $('<div class="invite-box mt-075"></div>');
     if (rec.emailSent) {
-      $box.append($('<p class="small m-0" role="status"></p>').text("We emailed the invitation to " + rec.email + ". You can also share the link yourself; it's shown only now."));
-      $box.append($('<label class="small"></label>').attr("for", inputId).text("Invitation link for " + rec.name));
+      $box.append($('<p class="small m-0" role="status"></p>').text(WP.t("We emailed the invitation to {email}. You can also share the link yourself; it's shown only now.", { email: rec.email })));
+      $box.append($('<label class="small"></label>').attr("for", inputId).text(WP.t("Invitation link for {name}", { name: rec.name })));
     } else {
-      $box.append($('<label class="small"></label>').attr("for", inputId).text("Invitation link for " + rec.name + " (send it to them; it's shown only now)"));
+      $box.append($('<label class="small"></label>').attr("for", inputId).text(WP.t("Invitation link for {name} (send it to them; it's shown only now)", { name: rec.name })));
     }
     var $in = $('<input type="text" readonly>').attr("id", inputId).val(rec.inviteUrl);
-    var $copy = $('<button type="button" class="btn secondary small">Copy</button>').on("click", function () {
-      var done = function () { WP.toast("Link copied."); };
+    var $copy = $('<button type="button" class="btn secondary small"></button>').text(WP.t("Copy")).on("click", function () {
+      var done = function () { WP.toast(WP.t("Link copied.")); };
       if (navigator.clipboard) navigator.clipboard.writeText(rec.inviteUrl).then(done, function () { $in.trigger("select"); });
       else { $in.trigger("select"); document.execCommand("copy"); done(); }
     });
-    var subject = "Recommendation letter request";
-    var bodyText = "Hello " + rec.name + ",\n\nWould you write a recommendation letter for my application to " + app.university + " (" + app.programName + ")? You can submit it here:\n" + rec.inviteUrl + "\n\nThank you!";
-    var $mail = $('<a class="btn secondary small">Email</a>').attr("href", "mailto:" + encodeURIComponent(rec.email) + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(bodyText));
+    var subject = WP.t("Recommendation letter request");
+    var bodyText = WP.t("Hello {name},\n\nWould you write a recommendation letter for my application to {university} ({program})? You can submit it here:\n{url}\n\nThank you!",
+      { name: rec.name, university: app.university, program: app.programName, url: rec.inviteUrl });
+    var $mail = $('<a class="btn secondary small"></a>').text(WP.t("Email")).attr("href", "mailto:" + encodeURIComponent(rec.email) + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(bodyText));
     $box.append($('<div class="invite-link"></div>').append($in, $copy, $mail));
     return $box;
   }
@@ -225,28 +229,28 @@ jQuery(function ($) {
   var freshLinks = {};
   function renderRecs(recs) {
     var $ul = $("#recs").empty();
-    if (!recs.length) $ul.append($('<li class="muted small">No letters requested yet.</li>'));
+    if (!recs.length) $ul.append($('<li class="muted small"></li>').text(WP.t("No letters requested yet.")));
     $.each(recs, function (_, r) {
       var $li = $("<li>").attr("data-rec", r.id);
       var $head = $('<div class="actions"></div>').append($("<strong>").text(r.name), $('<span class="pill"></span>').addClass("rec-" + r.status).text(WP.labels.rec[r.status]));
       $li.append($head);
-      $li.append($('<p class="muted small m-0"></p>').text([r.email, r.relationship].filter(Boolean).join(" · ") + " · requested " + WP.fmtTime(r.requestedAt)));
-      if (r.waivedAccess) $li.append($('<p class="small m-0"></p>').text(r.status === "submitted" ? "Confidential letter received (you waived access)." : "Confidential: you waived access to this letter."));
-      if (r.letterText) $li.append($("<details class='mt-075'></details>").append($("<summary>").text("Read letter"), $("<p class='small'></p>").text(r.letterText)));
-      if (r.declineReason) $li.append($('<p class="small m-0"></p>').text("Reason: " + r.declineReason));
+      $li.append($('<p class="muted small m-0"></p>').text([r.email, r.relationship].filter(Boolean).join(" · ") + " · " + WP.t("requested {time}", { time: WP.fmtTime(r.requestedAt) })));
+      if (r.waivedAccess) $li.append($('<p class="small m-0"></p>').text(r.status === "submitted" ? WP.t("Confidential letter received (you waived access).") : WP.t("Confidential: you waived access to this letter.")));
+      if (r.letterText) $li.append($("<details class='mt-075'></details>").append($("<summary>").text(WP.t("Read letter")), $("<p class='small'></p>").text(r.letterText)));
+      if (r.declineReason) $li.append($('<p class="small m-0"></p>').text(WP.t("Reason: {reason}", { reason: r.declineReason })));
       if (r.status === "requested") {
         var $act = $('<div class="actions mt-075"></div>');
-        $act.append($('<button type="button" class="btn secondary small">New link</button>').attr("aria-label", "Create a new link for " + r.name).on("click", function () {
+        $act.append($('<button type="button" class="btn secondary small"></button>').text(WP.t("New link")).attr("aria-label", WP.t("Create a new link for {name}", { name: r.name })).on("click", function () {
           WP.busy($(this), WP.api("POST", base + "/recommendations/" + encodeURIComponent(r.id) + "/regenerate", {})).then(function (rec) {
             freshLinks[rec.id] = rec;
             loadRecs();
           }, function (err) { WP.toast(err.message, "error"); });
         }));
-        $act.append($('<button type="button" class="btn link small">Cancel request</button>').attr("aria-label", "Cancel the request to " + r.name).on("click", function () {
+        $act.append($('<button type="button" class="btn link small"></button>').text(WP.t("Cancel request")).attr("aria-label", WP.t("Cancel the request to {name}", { name: r.name })).on("click", function () {
           WP.api("POST", base + "/recommendations/" + encodeURIComponent(r.id) + "/cancel", {}).then(function () {
             delete freshLinks[r.id];
             loadRecs();
-            WP.toast("Request cancelled; the link no longer works.");
+            WP.toast(WP.t("Request cancelled; the link no longer works."));
           }, function (err) { WP.toast(err.message, "error"); });
         }));
         $li.append($act);
@@ -278,7 +282,7 @@ jQuery(function ($) {
   }
 
   $("#delete-app").on("click", function () {
-    if (!window.confirm("Delete this application and all recommendation requests? This cannot be undone.")) return;
+    if (!window.confirm(WP.t("Delete this application and all recommendation requests? This cannot be undone."))) return;
     WP.busy($(this), WP.api("DELETE", base)).then(function () {
       leave();
     }, function (err) { WP.toast(err.message, "error"); });

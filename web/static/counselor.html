@@ -3,54 +3,55 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Catalog · Waypoint</title>
+<title data-i18n>Catalog · Waypoint</title>
 <meta name="description" content="Maintain programs, rounds and requirements.">
 <meta name="theme-color" content="#0b6e65">
 <link rel="icon" href="/img/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/css/app.css">
 <script defer src="/vendor/jquery-3.7.1.min.js"></script>
+<script defer src="/js/i18n-zh.js"></script>
 <script defer src="/js/common.js"></script>
 <script defer src="/js/counselor.js"></script>
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="skip-link" href="#main" data-i18n>Skip to content</a>
 <header class="site-header">
   <div class="bar">
     <a class="brand" href="/"><img src="/img/logo.svg" alt="" width="28" height="28"> Waypoint</a>
-    <nav id="site-nav" class="site-nav" aria-label="Main"></nav>
+    <nav id="site-nav" class="site-nav" aria-label="Main" data-i18n-attr="aria-label"></nav>
     <div id="user-menu" class="user-menu"></div>
   </div>
 </header>
 <main id="main">
 <div class="page-head">
   <div>
-    <h1>Program catalog</h1>
-    <p class="subtitle">Changes to rounds and requirements re-plan every affected student's timeline.</p>
+    <h1 data-i18n>Program catalog</h1>
+    <p class="subtitle" data-i18n>Changes to rounds and requirements re-plan every affected student's timeline.</p>
   </div>
-  <div class="actions"><button class="btn" type="button" id="new-program" data-requires-js disabled>New program</button></div>
+  <div class="actions"><button class="btn" type="button" id="new-program" data-requires-js disabled data-i18n>New program</button></div>
 </div>
 <div class="grid-2">
   <section class="card" aria-labelledby="list-title">
-    <h2 id="list-title">Programs</h2>
+    <h2 id="list-title" data-i18n>Programs</h2>
     <form id="filter-form" role="search" class="row mb-05">
       <div class="field grow-1 m-0">
-        <label for="filter-q" class="visually-hidden">Filter programs</label>
-        <input id="filter-q" type="search" placeholder="Filter by university or program">
+        <label for="filter-q" class="visually-hidden" data-i18n>Filter programs</label>
+        <input id="filter-q" type="search" placeholder="Filter by university or program" data-i18n-attr="placeholder">
       </div>
-      <button class="btn secondary" type="submit">Filter</button>
+      <button class="btn secondary" type="submit" data-i18n>Filter</button>
     </form>
     <table class="data">
-      <thead><tr><th scope="col">Program</th><th scope="col">Rounds</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+      <thead><tr><th scope="col" data-i18n>Program</th><th scope="col" data-i18n>Rounds</th><th scope="col"><span class="visually-hidden" data-i18n>Actions</span></th></tr></thead>
       <tbody id="program-rows"></tbody>
     </table>
-    <div class="actions center mt-075"><button class="btn secondary small" type="button" id="more" hidden>Load more</button></div>
+    <div class="actions center mt-075"><button class="btn secondary small" type="button" id="more" hidden data-i18n>Load more</button></div>
   </section>
   <aside>
     <section class="card" aria-labelledby="sync-title">
-      <h2 id="sync-title">Timeline sync</h2>
-      <p class="muted small">Event streams consumed by the timeline service.</p>
+      <h2 id="sync-title" data-i18n>Timeline sync</h2>
+      <p class="muted small" data-i18n>Event streams consumed by the timeline service.</p>
       <table class="data">
-        <thead><tr><th scope="col">Stream</th><th scope="col">Cursor</th><th scope="col">Lag</th><th scope="col"><abbr title="Dead letters: events that could not be applied">Parked</abbr></th><th scope="col">State</th></tr></thead>
+        <thead><tr><th scope="col" data-i18n>Stream</th><th scope="col" data-i18n>Cursor</th><th scope="col" data-i18n>Lag</th><th scope="col"><abbr title="Dead letters: events that could not be applied" data-i18n data-i18n-attr="title">Parked</abbr></th><th scope="col" data-i18n>State</th></tr></thead>
         <tbody id="sync-rows"></tbody>
       </table>
     </section>
@@ -58,51 +59,51 @@
 </div>
 <dialog id="edit-dialog" aria-labelledby="edit-title" class="wide">
   <form id="edit-form" method="dialog">
-    <h2 id="edit-title">Edit program</h2>
+    <h2 id="edit-title" data-i18n>Edit program</h2>
     <p class="form-error" role="alert" id="edit-error"></p>
     <div class="row">
-      <div class="field"><label for="p-university">University</label><input id="p-university" type="text" required maxlength="120"></div>
-      <div class="field"><label for="p-name">Program</label><input id="p-name" type="text" required maxlength="120"></div>
+      <div class="field"><label for="p-university" data-i18n>University</label><input id="p-university" type="text" required maxlength="120"></div>
+      <div class="field"><label for="p-name" data-i18n>Program</label><input id="p-name" type="text" required maxlength="120"></div>
     </div>
     <div class="row">
-      <div class="field"><label for="p-degree">Degree</label>
-        <select id="p-degree"><option value="master">Master's</option><option value="phd">PhD</option><option value="mba">MBA</option><option value="bachelor">Bachelor's</option></select></div>
-      <div class="field"><label for="p-field">Field</label><input id="p-field" type="text" required maxlength="60"></div>
-      <div class="field"><label for="p-intake">Intake</label><input id="p-intake" type="text" required maxlength="40" placeholder="Fall 2027"></div>
+      <div class="field"><label for="p-degree" data-i18n>Degree</label>
+        <select id="p-degree"><option value="master" data-i18n>Master's</option><option value="phd" data-i18n>PhD</option><option value="mba" data-i18n>MBA</option><option value="bachelor" data-i18n>Bachelor's</option></select></div>
+      <div class="field"><label for="p-field" data-i18n>Field</label><input id="p-field" type="text" required maxlength="60"></div>
+      <div class="field"><label for="p-intake" data-i18n>Intake</label><input id="p-intake" type="text" required maxlength="40" placeholder="Fall 2027"></div>
     </div>
     <div class="row">
-      <div class="field"><label for="p-country">Country</label><input id="p-country" type="text" required maxlength="60"></div>
-      <div class="field"><label for="p-city">City</label><input id="p-city" type="text" maxlength="60"></div>
-      <div class="field"><label for="p-tz">Time zone</label><input id="p-tz" type="text" required placeholder="America/New_York"></div>
+      <div class="field"><label for="p-country" data-i18n>Country</label><input id="p-country" type="text" required maxlength="60"></div>
+      <div class="field"><label for="p-city" data-i18n>City</label><input id="p-city" type="text" maxlength="60"></div>
+      <div class="field"><label for="p-tz" data-i18n>Time zone</label><input id="p-tz" type="text" required placeholder="America/New_York"></div>
     </div>
     <fieldset>
-      <legend>Rounds</legend>
+      <legend data-i18n>Rounds</legend>
       <div id="deadline-rows"></div>
-      <button class="btn secondary small" type="button" id="add-deadline">Add round</button>
+      <button class="btn secondary small" type="button" id="add-deadline" data-i18n>Add round</button>
     </fieldset>
     <fieldset>
-      <legend>Required documents</legend>
+      <legend data-i18n>Required documents</legend>
       <div class="doc-grid" id="doc-checks"></div>
     </fieldset>
     <div class="row">
-      <div class="field"><label for="p-toefl">Min TOEFL</label><input id="p-toefl" type="number" min="0" max="120"></div>
-      <div class="field"><label for="p-ielts">Min IELTS</label><input id="p-ielts" type="number" min="0" max="9" step="0.5"></div>
-      <div class="field"><label for="p-recs">Letters required</label><input id="p-recs" type="number" min="0" max="6"></div>
-      <div class="field"><label class="checkbox align-input"><input type="checkbox" id="p-gre"> <span>GRE required</span></label></div>
+      <div class="field"><label for="p-toefl" data-i18n>Min TOEFL</label><input id="p-toefl" type="number" min="0" max="120"></div>
+      <div class="field"><label for="p-ielts" data-i18n>Min IELTS</label><input id="p-ielts" type="number" min="0" max="9" step="0.5"></div>
+      <div class="field"><label for="p-recs" data-i18n>Letters required</label><input id="p-recs" type="number" min="0" max="6"></div>
+      <div class="field"><label class="checkbox align-input"><input type="checkbox" id="p-gre"> <span data-i18n>GRE required</span></label></div>
     </div>
     <div class="row">
-      <div class="field"><label for="p-fee">Application fee</label><input id="p-fee" type="number" min="0" step="0.01"></div>
-      <div class="field"><label for="p-currency">Currency</label><input id="p-currency" type="text" maxlength="3" placeholder="USD"></div>
-      <div class="field grow-2"><label for="p-website">Website</label><input id="p-website" type="url" maxlength="300"></div>
+      <div class="field"><label for="p-fee" data-i18n>Application fee</label><input id="p-fee" type="number" min="0" step="0.01"></div>
+      <div class="field"><label for="p-currency" data-i18n>Currency</label><input id="p-currency" type="text" maxlength="3" placeholder="USD"></div>
+      <div class="field grow-2"><label for="p-website" data-i18n>Website</label><input id="p-website" type="url" maxlength="300"></div>
     </div>
     <div class="actions">
-      <button class="btn" type="submit" id="save-program">Save</button>
-      <button class="btn secondary" type="button" id="cancel-edit">Cancel</button>
+      <button class="btn" type="submit" id="save-program" data-i18n>Save</button>
+      <button class="btn secondary" type="button" id="cancel-edit" data-i18n>Cancel</button>
     </div>
   </form>
 </dialog>
 </main>
-<footer class="site-footer">
+<footer class="site-footer" data-i18n>
   Waypoint is a portfolio project. The program catalog is sample data &mdash; always confirm deadlines on each program's official website.
 </footer>
 <div id="toasts" aria-live="polite"></div>

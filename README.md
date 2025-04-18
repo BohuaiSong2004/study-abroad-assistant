@@ -33,6 +33,9 @@ changes a deadline, a document is ticked off, or a recommender submits a letter.
   validates against published XSD schemas ([`/schemas/timeline-v1.xsd`](internal/xmlexport/schemas/timeline-v1.xsd),
   [`/schemas/packet-v1.xsd`](internal/xmlexport/schemas/packet-v1.xsd)).
 - **Counselor console** — edit programs and rounds; watch the sync streams.
+- **English and Simplified Chinese** — the UI follows the browser's language
+  or the header switch, including the milestones and warnings the planner
+  generates, dates, fees and API error messages.
 
 ## Architecture
 

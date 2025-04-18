@@ -10,7 +10,7 @@ jQuery(function ($) {
 
   var token = new URLSearchParams(window.location.hash.slice(1)).get("token") || "";
   if (token) {
-    $("#reset-title").text("Choose a new password");
+    $("#reset-title").text(WP.t("Choose a new password"));
     $("#request").prop("hidden", true);
     $("#choose").prop("hidden", false);
   }
@@ -21,7 +21,7 @@ jQuery(function ($) {
     $("#request-error").text("");
     WP.busy($(this).find("button"), WP.api("POST", "/api/auth/password-reset", { email: email })).then(function () {
       $("#request-form").prop("hidden", true);
-      $("#request-done-text").text("If " + email + " has a Waypoint account, we've emailed it a link. The link works for 30 minutes.");
+      $("#request-done-text").text(WP.t("If {email} has a Waypoint account, we've emailed it a link. The link works for 30 minutes.", { email: email }));
       $("#request-done").prop("hidden", false);
     }, function (err) { WP.showError($("#request-error"), err); });
   });

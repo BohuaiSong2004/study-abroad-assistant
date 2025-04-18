@@ -247,6 +247,31 @@ Plain HTML5, CSS3 (custom properties, grid, dark mode via
 revalidated with an ETag. Interactive controls start disabled and are enabled
 when their handlers are attached.
 
+### English and Chinese
+
+- **Negotiated by the gateway.** A `wp_lang` cookie (the header switch) or,
+  failing that, `Accept-Language` picks the variant of each page; the Chinese
+  one arrives as `<html lang="zh-CN" class="i18n-pending">` and CSS keeps it
+  hidden until it is translated, so there is no flash of English and no
+  render-blocking script for anyone (a CSS-only fallback reveals the page
+  after 2 s if scripts fail). Both variants are pre-rendered and gzipped at
+  startup, with distinct ETags and `Vary: Cookie, Accept-Language`; static
+  assets are not negotiated.
+- **Keys are the English text.** HTML marks translatable text with
+  `data-i18n` (mixed content uses `{0}`, `{1}` for child links, so a Chinese
+  sentence can reorder them) and stays readable without JavaScript; scripts
+  wrap strings in `WP.t("Showing {n} programs", {n})`. API messages go
+  through `WP.tMsg` (exact text or a pattern for ones with numbers).
+- **Generated text has a structured form.** The planner's titles,
+  descriptions and warnings ("Submit application (Round 1 deadline)") carry a
+  `Text{code, args}` next to the English string, so the UI can render them in
+  Chinese (round names localized, names joined with `Intl.ListFormat`, fees
+  with `Intl.NumberFormat`). The XML export keeps English.
+- **Kept complete by a test.** `TestChineseDictionaryCoversTheUI` extracts
+  every key the way the browser computes it, runs the planner through every
+  branch that emits text, and fails on a missing translation or mismatched
+  placeholders.
+
 ## Deployment (Terraform, not applied)
 
 ECS Fargate services in private subnets behind an ALB; Cloud Map private DNS for

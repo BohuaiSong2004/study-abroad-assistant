@@ -3,132 +3,133 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Application · Waypoint</title>
+<title data-i18n>Application · Waypoint</title>
 <meta name="description" content="Your application plan, documents and recommendation letters.">
 <meta name="theme-color" content="#0b6e65">
 <link rel="icon" href="/img/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/css/app.css">
 <script defer src="/vendor/jquery-3.7.1.min.js"></script>
+<script defer src="/js/i18n-zh.js"></script>
 <script defer src="/js/common.js"></script>
 <script defer src="/js/application.js"></script>
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="skip-link" href="#main" data-i18n>Skip to content</a>
 <header class="site-header">
   <div class="bar">
     <a class="brand" href="/"><img src="/img/logo.svg" alt="" width="28" height="28"> Waypoint</a>
-    <nav id="site-nav" class="site-nav" aria-label="Main"></nav>
+    <nav id="site-nav" class="site-nav" aria-label="Main" data-i18n-attr="aria-label"></nav>
     <div id="user-menu" class="user-menu"></div>
   </div>
 </header>
 <main id="main">
-<p><a href="/dashboard.html">&larr; All applications</a></p>
+<p><a href="/dashboard.html" data-i18n>&larr; All applications</a></p>
 <div class="page-head">
   <div>
-    <h1 id="app-title" data-reserve>Loading&hellip;</h1>
+    <h1 id="app-title" data-reserve data-i18n>Loading&hellip;</h1>
     <p class="subtitle" id="app-subtitle" data-reserve></p>
   </div>
   <div class="actions">
-    <span class="live" id="live" data-state="off">Connecting&hellip;</span>
+    <span class="live" id="live" data-state="off" data-i18n>Connecting&hellip;</span>
   </div>
 </div>
 <div class="grid-2">
   <div>
     <section class="card" aria-labelledby="tl-title">
-      <h2 id="tl-title" class="mt-0 mb-05">Timeline</h2>
-      <p class="muted small mb-05" id="tl-progress-label">&nbsp;</p>
+      <h2 id="tl-title" class="mt-0 mb-05" data-i18n>Timeline</h2>
+      <p class="muted small mb-05" id="tl-progress-label" >&nbsp;</p>
       <div id="tl-progress" class="reserve-progress"></div>
       <div id="warnings" class="mt-1"></div>
-      <p class="muted" id="tl-pending" hidden>Planning your timeline&hellip;</p>
+      <p class="muted" id="tl-pending" hidden data-i18n>Planning your timeline&hellip;</p>
       <ol class="timeline mt-1" id="timeline" aria-live="polite"><li class="milestone skeleton" aria-hidden="true"><span class="dot"></span><div><span class="bar-line"></span><span class="bar-line short"></span></div><div></div></li><li class="milestone skeleton" aria-hidden="true"><span class="dot"></span><div><span class="bar-line"></span><span class="bar-line short"></span></div><div></div></li><li class="milestone skeleton" aria-hidden="true"><span class="dot"></span><div><span class="bar-line"></span><span class="bar-line short"></span></div><div></div></li><li class="milestone skeleton" aria-hidden="true"><span class="dot"></span><div><span class="bar-line"></span><span class="bar-line short"></span></div><div></div></li><li class="milestone skeleton" aria-hidden="true"><span class="dot"></span><div><span class="bar-line"></span><span class="bar-line short"></span></div><div></div></li><li class="milestone skeleton" aria-hidden="true"><span class="dot"></span><div><span class="bar-line"></span><span class="bar-line short"></span></div><div></div></li><li class="milestone skeleton" aria-hidden="true"><span class="dot"></span><div><span class="bar-line"></span><span class="bar-line short"></span></div><div></div></li></ol>
       <details class="mt-1">
-        <summary>Add your own milestone</summary>
+        <summary data-i18n>Add your own milestone</summary>
         <form id="milestone-form" class="mt-075">
           <p class="form-error" role="alert" id="milestone-error"></p>
           <div class="row">
             <div class="field grow-2">
-              <label for="ms-title">Title</label>
+              <label for="ms-title" data-i18n>Title</label>
               <input id="ms-title" type="text" maxlength="120" required>
             </div>
             <div class="field">
-              <label for="ms-date">Due date</label>
+              <label for="ms-date" data-i18n>Due date</label>
               <input id="ms-date" type="date" required>
             </div>
           </div>
           <div class="field">
-            <label for="ms-desc">Notes (optional)</label>
+            <label for="ms-desc" data-i18n>Notes (optional)</label>
             <input id="ms-desc" type="text" maxlength="500">
           </div>
-          <button class="btn" type="submit" data-requires-js disabled>Add milestone</button>
+          <button class="btn" type="submit" data-requires-js disabled data-i18n>Add milestone</button>
         </form>
       </details>
     </section>
     <section class="card" aria-labelledby="recs-title">
-      <h2 id="recs-title">Recommendation letters</h2>
+      <h2 id="recs-title" data-i18n>Recommendation letters</h2>
       <p class="muted small" id="recs-needed"></p>
       <ul class="recs" id="recs"></ul>
       <details id="rec-details" class="mt-1">
-        <summary>Ask someone for a letter</summary>
+        <summary data-i18n>Ask someone for a letter</summary>
         <form id="rec-form" class="mt-075">
           <p class="form-error" role="alert" id="rec-error"></p>
           <div class="row">
             <div class="field">
-              <label for="rec-name">Name</label>
+              <label for="rec-name" data-i18n>Name</label>
               <input id="rec-name" type="text" maxlength="80" required autocomplete="off">
             </div>
             <div class="field">
-              <label for="rec-email">Email</label>
+              <label for="rec-email" data-i18n>Email</label>
               <input id="rec-email" type="email" required autocomplete="off">
             </div>
           </div>
           <div class="field">
-            <label for="rec-rel">Relationship (optional)</label>
-            <input id="rec-rel" type="text" maxlength="120" placeholder="e.g. Thesis advisor">
+            <label for="rec-rel" data-i18n>Relationship (optional)</label>
+            <input id="rec-rel" type="text" maxlength="120" placeholder="e.g. Thesis advisor" data-i18n-attr="placeholder">
           </div>
           <div class="field">
-            <label class="checkbox"><input type="checkbox" id="rec-waive" checked> <span>I waive my right to read this letter (recommended; programs give confidential letters more weight).</span></label>
+            <label class="checkbox"><input type="checkbox" id="rec-waive" checked> <span data-i18n>I waive my right to read this letter (recommended; programs give confidential letters more weight).</span></label>
           </div>
-          <button class="btn" type="submit" data-requires-js disabled>Create invitation link</button>
+          <button class="btn" type="submit" data-requires-js disabled data-i18n>Create invitation link</button>
         </form>
       </details>
     </section>
   </div>
   <aside>
     <section class="card" aria-labelledby="status-title">
-      <h2 id="status-title">Status</h2>
+      <h2 id="status-title" data-i18n>Status</h2>
       <p class="form-error" role="alert" id="app-error"></p>
       <div class="field">
-        <label for="app-status">Application status</label>
+        <label for="app-status" data-i18n>Application status</label>
         <select id="app-status" data-requires-js disabled></select>
       </div>
       <div class="field">
-        <label for="app-round">Round</label>
+        <label for="app-round" data-i18n>Round</label>
         <select id="app-round" data-requires-js disabled></select>
         <p class="hint" id="deadline-hint"></p>
       </div>
       <div class="field">
-        <label for="app-notes">Notes</label>
+        <label for="app-notes" data-i18n>Notes</label>
         <textarea id="app-notes" maxlength="5000"></textarea>
       </div>
-      <button class="btn secondary" type="button" id="save-notes" data-requires-js disabled>Save notes</button>
+      <button class="btn secondary" type="button" id="save-notes" data-requires-js disabled data-i18n>Save notes</button>
     </section>
     <section class="card" aria-labelledby="export-title">
-      <h2 id="export-title">Export</h2>
-      <p class="muted small">XML documents validate against the published <a href="/schemas/timeline-v1.xsd">timeline</a> and <a href="/schemas/packet-v1.xsd">packet</a> schemas.</p>
+      <h2 id="export-title" data-i18n>Export</h2>
+      <p class="muted small" data-i18n>XML documents validate against the published <a href="/schemas/timeline-v1.xsd" data-i18n>timeline</a> and <a href="/schemas/packet-v1.xsd" data-i18n>packet</a> schemas.</p>
       <div class="actions">
-        <a class="btn secondary" id="export-timeline" href="#" download>Timeline (XML)</a>
-        <a class="btn secondary" id="export-packet" href="#" download>Recommendation packet (XML)</a>
+        <a class="btn secondary" id="export-timeline" href="#" download data-i18n>Timeline (XML)</a>
+        <a class="btn secondary" id="export-packet" href="#" download data-i18n>Recommendation packet (XML)</a>
       </div>
     </section>
     <section class="card" aria-labelledby="danger-title">
-      <h2 id="danger-title">Remove</h2>
-      <p class="muted small">Deletes this application, its plan and all recommendation requests.</p>
-      <button class="btn danger" type="button" id="delete-app" data-requires-js disabled>Delete application</button>
+      <h2 id="danger-title" data-i18n>Remove</h2>
+      <p class="muted small" data-i18n>Deletes this application, its plan and all recommendation requests.</p>
+      <button class="btn danger" type="button" id="delete-app" data-requires-js disabled data-i18n>Delete application</button>
     </section>
   </aside>
 </div>
 </main>
-<footer class="site-footer">
+<footer class="site-footer" data-i18n>
   Waypoint is a portfolio project. The program catalog is sample data &mdash; always confirm deadlines on each program's official website.
 </footer>
 <div id="toasts" aria-live="polite"></div>

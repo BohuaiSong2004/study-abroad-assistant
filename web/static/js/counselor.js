@@ -33,25 +33,25 @@ jQuery(function ($) {
   function row(p) {
     var $tr = $("<tr>").attr("data-program", p.id);
     $tr.append($("<td>").append($("<strong>").text(p.university), $("<br>"), $("<span class='small'></span>").text(p.name), $("<br>"), $("<span class='muted small'></span>").text("v" + p.version)));
-    $tr.append($("<td class='small'></td>").html($.map(p.deadlines, function (d) { return $("<span>").text(d.label + ": " + d.date).prop("outerHTML"); }).join("<br>")));
-    $tr.append($("<td>").append($('<button type="button" class="btn secondary small">Edit</button>').attr("aria-label", "Edit " + p.university + " " + p.name).on("click", function () { open(programs[p.id]); })));
+    $tr.append($("<td class='small'></td>").html($.map(p.deadlines, function (d) { return $("<span>").text((WP.labels.round[d.round] || d.label) + ": " + d.date).prop("outerHTML"); }).join("<br>")));
+    $tr.append($("<td>").append($('<button type="button" class="btn secondary small"></button>').text(WP.t("Edit")).attr("aria-label", WP.t("Edit {university} {program}", { university: p.university, program: p.name })).on("click", function () { open(programs[p.id]); })));
     return $tr;
   }
 
   function deadlineRow(d) {
     var $row = $('<div class="deadline-row"></div>');
-    var $sel = $('<select aria-label="Round"></select>');
+    var $sel = $("<select>").attr("aria-label", WP.t("Round"));
     $.each(WP.labels.round, function (k, v) { $sel.append($("<option>").val(k).text(v)); });
     $sel.val(d ? d.round : "round_1");
-    var $date = $('<input type="date" aria-label="Deadline" required>').val(d ? d.date : "");
-    var $rm = $('<button type="button" class="btn link small">Remove</button>').on("click", function () { $row.remove(); });
+    var $date = $('<input type="date" required>').attr("aria-label", WP.t("Deadline")).val(d ? d.date : "");
+    var $rm = $('<button type="button" class="btn link small"></button>').text(WP.t("Remove")).on("click", function () { $row.remove(); });
     return $row.append($sel, $date, $rm);
   }
 
   function open(p) {
     editing = p || null;
     $("#edit-error").text("");
-    $("#edit-title").text(p ? "Edit program" : "New program");
+    $("#edit-title").text(p ? WP.t("Edit program") : WP.t("New program"));
     var v = p || { degree: "master", deadlines: [], requirements: { documents: ["statement_of_purpose", "cv", "transcript"], recommendationsRequired: 2 }, tags: [] };
     $("#p-university").val(v.university || "");
     $("#p-name").val(v.name || "");
@@ -114,7 +114,7 @@ jQuery(function ($) {
       var $old = $('#program-rows tr[data-program="' + p.id + '"]');
       if ($old.length) $old.replaceWith(row(p)); else $("#program-rows").prepend(row(p));
       dialog.close();
-      WP.toast(editing ? "Saved. Affected timelines are being re-planned." : "Program created.");
+      WP.toast(editing ? WP.t("Saved. Affected timelines are being re-planned.") : WP.t("Program created."));
     }, function (err) {
       if (err.code === "conflict") err.message += " (Close and reopen the program to load the latest version.)";
       WP.showError($err, err);
@@ -125,9 +125,9 @@ jQuery(function ($) {
     WP.api("GET", "/api/sync-status").then(function (res) {
       var $b = $("#sync-rows").empty();
       $.each(res.streams, function (_, s) {
-        var state = s.connected ? (s.lag === 0 ? "In sync" : "Catching up") : (s.leader ? "Reconnecting" : "Standby");
+        var state = WP.t(s.connected ? (s.lag === 0 ? "In sync" : "Catching up") : (s.leader ? "Reconnecting" : "Standby"));
         var $dead = $("<td>").text(s.deadLetters);
-        if (s.deadLetters > 0) $dead.append(" ", $('<span class="pill overdue">Needs attention</span>'));
+        if (s.deadLetters > 0) $dead.append(" ", $('<span class="pill overdue"></span>').text(WP.t("Needs attention")));
         $b.append($("<tr>").append($("<td>").text(s.stream), $("<td>").text(s.cursor), $("<td>").text(s.lag), $dead, $("<td>").text(state)));
       });
     });

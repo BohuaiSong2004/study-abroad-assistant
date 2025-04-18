@@ -4,19 +4,19 @@ jQuery(function ($) {
 
   WP.requireRole("student").then(function (account) {
     WP.renderHeader(account);
-    $("#greeting").text("Welcome back, " + account.name + ".");
+    $("#greeting").text(WP.t("Welcome back, {name}.", { name: account.name }));
     load();
     WP.live(WP.debounce(function () { load(true); }, 150));
     WP.ready();
   });
 
   function countdown(deadline) {
-    if (!deadline) return $('<span class="pill">No deadline</span>');
+    if (!deadline) return $('<span class="pill"></span>').text(WP.t("No deadline"));
     var n = WP.daysUntil(deadline);
     var $p = $('<span class="pill countdown"></span>');
-    if (n < 0) return $p.addClass("overdue").text("Deadline passed");
+    if (n < 0) return $p.addClass("overdue").text(WP.t("Deadline passed"));
     if (n <= 14) $p.addClass("soon");
-    return $p.text(n === 0 ? "Due today" : n + (n === 1 ? " day left" : " days left"));
+    return $p.text(n === 0 ? WP.t("Due today") : n === 1 ? WP.t("1 day left") : WP.t("{n} days left", { n: n }));
   }
 
   function nextMilestone(tl) {
@@ -33,19 +33,19 @@ jQuery(function ($) {
     $li.append($('<div class="actions"></div>').append(WP.statusPill(app.status), tl ? countdown(tl.deadline) : ""));
     $li.append($h, $('<p class="meta mt-0"></p>').text(app.programName + " · " + app.intake));
     if (!tl) {
-      $li.append($('<p class="muted small">Planning timeline…</p>'));
+      $li.append($('<p class="muted small"></p>').text(WP.t("Planning timeline…")));
       return $li;
     }
-    $li.append($('<p class="meta m-0"></p>').text(tl.roundLabel + " deadline " + WP.fmtDate(tl.deadline)));
-    $li.append(WP.progressBar(tl.progress.done, tl.progress.total, app.university + " progress"));
-    $li.append($('<p class="muted small m-0"></p>').text(tl.progress.done + " of " + tl.progress.total + " steps done"));
+    $li.append($('<p class="meta m-0"></p>').text(WP.t("{round} deadline {date}", { round: WP.roundLabel(tl), date: WP.fmtDate(tl.deadline) })));
+    $li.append(WP.progressBar(tl.progress.done, tl.progress.total, WP.t("{university} progress", { university: app.university })));
+    $li.append($('<p class="muted small m-0"></p>').text(WP.t("{done} of {total} steps done", { done: tl.progress.done, total: tl.progress.total })));
     var m = nextMilestone(tl);
     var $next = $('<p class="next"></p>');
     if (m) {
-      $next.append($("<strong>").text("Next: "), document.createTextNode(m.title + " — " + WP.fmtShort(m.dueDate) + " "));
-      if (m.overdue) $next.append($('<span class="pill overdue">Overdue</span>'));
+      $next.append($("<strong>").text(WP.t("Next:") + " "), document.createTextNode(WP.milestoneTitle(m) + " — " + WP.fmtShort(m.dueDate) + " "));
+      if (m.overdue) $next.append($('<span class="pill overdue"></span>').text(WP.t("Overdue")));
     } else {
-      $next.text("All steps complete.");
+      $next.text(WP.t("All steps complete."));
     }
     return $li.append($next);
   }
@@ -99,9 +99,9 @@ jQuery(function ($) {
       var m = it.milestone;
       var $li = $("<li>");
       $li.append($("<time>").attr("datetime", m.dueDate).text(WP.fmtShort(m.dueDate)));
-      var $what = $("<div>").append($("<a>").attr("href", "/application.html?id=" + encodeURIComponent(it.applicationId)).text(m.title));
+      var $what = $("<div>").append($("<a>").attr("href", "/application.html?id=" + encodeURIComponent(it.applicationId)).text(WP.milestoneTitle(m)));
       $what.append($('<span class="where"></span>').text(it.university + " · " + it.programName));
-      $what.append($('<span class="badge"></span>').append(m.overdue ? $('<span class="pill overdue">Overdue</span>') : $('<span class="muted"></span>').text(WP.relative(m.dueDate))));
+      $what.append($('<span class="badge"></span>').append(m.overdue ? $('<span class="pill overdue"></span>').text(WP.t("Overdue")) : $('<span class="muted"></span>').text(WP.relative(m.dueDate))));
       $li.append($what);
       $ag.append($li);
     });

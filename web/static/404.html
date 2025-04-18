@@ -3,32 +3,33 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Not found · Waypoint</title>
+<title data-i18n>Not found · Waypoint</title>
 <meta name="description" content="Page not found.">
 <meta name="theme-color" content="#0b6e65">
 <link rel="icon" href="/img/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/css/app.css">
 <script defer src="/vendor/jquery-3.7.1.min.js"></script>
+<script defer src="/js/i18n-zh.js"></script>
 <script defer src="/js/common.js"></script>
 <script defer src="/js/notfound.js"></script>
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="skip-link" href="#main" data-i18n>Skip to content</a>
 <header class="site-header">
   <div class="bar">
     <a class="brand" href="/"><img src="/img/logo.svg" alt="" width="28" height="28"> Waypoint</a>
-    <nav id="site-nav" class="site-nav" aria-label="Main"></nav>
+    <nav id="site-nav" class="site-nav" aria-label="Main" data-i18n-attr="aria-label"></nav>
     <div id="user-menu" class="user-menu"></div>
   </div>
 </header>
 <main id="main">
 <div class="card empty">
-  <h1>Page not found</h1>
-  <p>The page you were looking for doesn't exist.</p>
-  <a class="btn" href="/">Go home</a>
+  <h1 data-i18n>Page not found</h1>
+  <p data-i18n>The page you were looking for doesn't exist.</p>
+  <a class="btn" href="/" data-i18n>Go home</a>
 </div>
 </main>
-<footer class="site-footer">
+<footer class="site-footer" data-i18n>
   Waypoint is a portfolio project. The program catalog is sample data &mdash; always confirm deadlines on each program's official website.
 </footer>
 <div id="toasts" aria-live="polite"></div>

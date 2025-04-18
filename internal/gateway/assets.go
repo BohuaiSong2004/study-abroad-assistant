@@ -33,6 +33,10 @@ type asset struct {
 	ctype    string
 	etag     string
 	hash     string
+	// zh is the Chinese variant of an HTML page: same markup, served with
+	// <html lang="zh-CN" class="i18n-pending"> so it stays hidden until the
+	// page script has translated it (see lang.go and js/i18n-zh.js).
+	zh *asset
 }
 
 var refRE = regexp.MustCompile(`(src|href)="(/(?:css|js|vendor|img)/[^"?#]+)"`)
@@ -76,6 +80,7 @@ func (a *assets) load() error {
 	}
 	for name, f := range files {
 		if strings.HasSuffix(name, ".html") {
+			f.zh = &asset{ctype: f.ctype}
 			f.body = refRE.ReplaceAllFunc(f.body, func(m []byte) []byte {
 				sub := refRE.FindSubmatch(m)
 				if ref, ok := files[string(sub[2])]; ok {
@@ -85,22 +90,30 @@ func (a *assets) load() error {
 			})
 			sum := sha256.Sum256(f.body)
 			f.hash = hex.EncodeToString(sum[:])[:12]
+			f.zh.body = bytes.Replace(f.body, []byte(`<html lang="en">`), []byte(`<html lang="zh-CN" class="i18n-pending">`), 1)
+			f.zh.hash = f.hash + "-zh"
+			f.zh.finish()
 		}
-		f.etag = `"` + f.hash + `"`
-		if compressible(f.ctype) && len(f.body) > 512 {
-			var buf bytes.Buffer
-			zw, _ := gzip.NewWriterLevel(&buf, gzip.BestCompression)
-			_, _ = zw.Write(f.body)
-			_ = zw.Close()
-			if buf.Len() < len(f.body) {
-				f.gz = buf.Bytes()
-			}
-		}
+		f.finish()
 	}
 	a.mu.Lock()
 	a.files = files
 	a.mu.Unlock()
 	return nil
+}
+
+// finish sets the ETag and the gzip body.
+func (f *asset) finish() {
+	f.etag = `"` + f.hash + `"`
+	if compressible(f.ctype) && len(f.body) > 512 {
+		var buf bytes.Buffer
+		zw, _ := gzip.NewWriterLevel(&buf, gzip.BestCompression)
+		_, _ = zw.Write(f.body)
+		_ = zw.Close()
+		if buf.Len() < len(f.body) {
+			f.gz = buf.Bytes()
+		}
+	}
 }
 
 func compressible(ct string) bool {
@@ -123,9 +136,15 @@ func (a *assets) serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h := w.Header()
+	h.Set("Vary", "Accept-Encoding")
+	if f.zh != nil {
+		h.Set("Vary", "Accept-Encoding, Cookie, Accept-Language")
+		if wantsChinese(r) {
+			f = f.zh
+		}
+	}
 	h.Set("Content-Type", f.ctype)
 	h.Set("ETag", f.etag)
-	h.Set("Vary", "Accept-Encoding")
 	switch {
 	case strings.HasSuffix(p, ".html"):
 		h.Set("Cache-Control", "no-cache")
@@ -156,6 +175,9 @@ func (a *assets) notFound(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		http.NotFound(w, r)
 		return
+	}
+	if f.zh != nil && wantsChinese(r) {
+		f = f.zh
 	}
 	w.Header().Set("Content-Type", f.ctype)
 	w.Header().Set("Cache-Control", "no-cache")
