@@ -1,0 +1,160 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUF_VERSION: v1.75.0
+  PROTOC_GEN_GO_VERSION: v1.36.12
+  PROTOC_GEN_GO_GRPC_VERSION: v1.6.2
+
+jobs:
+  lint:
+    name: Lint and generated code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Install buf and protoc plugins
+        run: |
+          go install github.com/bufbuild/buf/cmd/buf@${BUF_VERSION}
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@${PROTOC_GEN_GO_VERSION}
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@${PROTOC_GEN_GO_GRPC_VERSION}
+      - name: buf lint
+        run: buf lint
+      - name: Generated code is up to date
+        run: |
+          rm -rf gen && buf generate
+          git diff --exit-code -- gen || (echo "::error::run 'buf generate' and commit the result"; exit 1)
+          test -z "$(git status --porcelain -- gen)"
+      - name: go vet
+        run: go vet ./...
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.15.0
+
+  test:
+    name: Go tests (DynamoDB Local)
+    runs-on: ubuntu-latest
+    services:
+      dynamodb:
+        image: amazon/dynamodb-local:latest
+        ports: ["8000:8000"]
+    env:
+      DYNAMODB_ENDPOINT: http://localhost:8000
+      AWS_REGION: us-east-1
+      REQUIRE_DYNAMODB: "1"
+      REQUIRE_XMLLINT: "1"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Install xmllint (XSD validation in tests)
+        run: sudo apt-get update -q && sudo apt-get install -y -q libxml2-utils
+      - name: Test with race detector and coverage
+        run: go test ./... -race -count=1 -coverpkg=./internal/... -coverprofile=coverage.out
+      - name: Coverage summary
+        run: |
+          go tool cover -func=coverage.out | tail -1
+          echo "### Coverage: $(go tool cover -func=coverage.out | tail -1 | awk '{print $3}')" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.out
+
+  e2e:
+    name: Browser tests (Playwright)
+    runs-on: ubuntu-latest
+    services:
+      dynamodb:
+        image: amazon/dynamodb-local:latest
+        ports: ["8000:8000"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: Start the stack (README dev mode)
+        run: |
+          ./scripts/dev.sh > dev.log 2>&1 &
+          for i in $(seq 1 120); do grep -q "Waypoint is running" dev.log && break; sleep 1; done
+          grep -q "Waypoint is running" dev.log || (cat dev.log; exit 1)
+      - name: Install Playwright
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Run Playwright
+        working-directory: e2e
+        run: npx playwright test
+      - name: Service logs
+        if: always()
+        run: grep -E 'level=(WARN|ERROR)' dev.log | grep -v 'connection refused' | tail -50 || true
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+            dev.log
+
+  docker:
+    name: Docker images and compose smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build images
+        run: docker compose build
+      - name: Start the stack
+        run: |
+          docker compose up -d
+          for i in $(seq 1 90); do
+            [ "$(docker compose ps --format '{{.Health}}' | grep -c '^healthy$')" -ge 4 ] && break
+            sleep 2
+          done
+          docker compose ps
+      - name: Smoke test
+        run: |
+          for i in $(seq 1 30); do
+            n=$(curl -fsS 'http://localhost:8080/api/programs?pageSize=100' | jq '.programs | length') && [ "$n" -ge 38 ] && break
+            sleep 2
+          done
+          echo "catalog has $n programs"; [ "$n" -ge 38 ]
+          curl -fsS http://localhost:8080/ | grep -q '<title>Waypoint'
+          curl -fsS http://localhost:8080/api/session | jq -e '.authenticated == false'
+      - name: Logs
+        if: always()
+        run: docker compose logs --no-color | tail -200
+
+  terraform:
+    name: Terraform validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: deploy/terraform
+    steps:
+      - uses: actions/checkout@v5
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.17.2
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate
