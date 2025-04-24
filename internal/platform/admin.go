@@ -58,14 +58,23 @@ func ServeHTTP(ctx context.Context, log *slog.Logger, srv *http.Server) error {
 func Run(log *slog.Logger, fns ...func(ctx context.Context) error) {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	g, gctx := errgroup.WithContext(ctx)
-	for _, fn := range fns {
-		g.Go(func() error { return fn(gctx) })
-	}
-	if err := g.Wait(); err != nil && !errors.Is(err, context.Canceled) {
+	if err := RunContext(ctx, fns...); err != nil {
 		log.Error("exiting", "error", err)
 		stop()
 		panicExit(1)
 	}
 	log.Info("shutdown complete")
+}
+
+// RunContext runs fns until ctx is cancelled or one fails, which cancels the
+// others; cancellation is not an error.
+func RunContext(ctx context.Context, fns ...func(ctx context.Context) error) error {
+	g, gctx := errgroup.WithContext(ctx)
+	for _, fn := range fns {
+		g.Go(func() error { return fn(gctx) })
+	}
+	if err := g.Wait(); err != nil && !errors.Is(err, context.Canceled) {
+		return err
+	}
+	return nil
 }

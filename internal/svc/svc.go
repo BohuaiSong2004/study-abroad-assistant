@@ -4,6 +4,7 @@ package svc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -31,19 +32,30 @@ type Base struct {
 	Owner  string // unique id of this process (leases)
 }
 
-// InternalToken returns INTERNAL_TOKEN, refusing the dev default when
-// ENVIRONMENT=production.
+// InternalToken returns INTERNAL_TOKEN, exiting when it is missing in
+// production (see TokenFromEnv).
 func InternalToken(log *slog.Logger) string {
-	t := platform.Env("INTERNAL_TOKEN", "")
-	if t == "" {
-		if platform.Env("ENVIRONMENT", "development") == "production" {
-			log.Error("INTERNAL_TOKEN must be set in production")
-			os.Exit(1)
-		}
+	t, err := TokenFromEnv()
+	if err != nil {
+		log.Error(err.Error())
+		os.Exit(1)
+	}
+	if t == DevInternalToken {
 		log.Warn("INTERNAL_TOKEN not set; using the development token")
-		t = DevInternalToken
 	}
 	return t
+}
+
+// TokenFromEnv returns INTERNAL_TOKEN, or the development token outside
+// production; in production a missing token is an error.
+func TokenFromEnv() (string, error) {
+	if t := platform.Env("INTERNAL_TOKEN", ""); t != "" {
+		return t, nil
+	}
+	if platform.Env("ENVIRONMENT", "development") == "production" {
+		return "", errors.New("INTERNAL_TOKEN must be set in production")
+	}
+	return DevInternalToken, nil
 }
 
 // Fatal reports a startup error and exits.
@@ -70,7 +82,13 @@ func New(name string, tables ...string) (*Base, error) {
 		}
 	}
 	host, _ := os.Hostname()
-	token := InternalToken(log)
+	token, err := TokenFromEnv()
+	if err != nil {
+		return nil, err
+	}
+	if token == DevInternalToken {
+		log.Warn("INTERNAL_TOKEN not set; using the development token")
+	}
 	var opts []grpc.ServerOption
 	tlsFiles := platform.TLSFromEnv()
 	if tlsFiles.Enabled() {
@@ -94,8 +112,17 @@ func New(name string, tables ...string) (*Base, error) {
 func (b *Base) Table(name string) string { return b.Prefix + name }
 
 // Serve runs the gRPC and admin servers plus any background workers until
-// SIGTERM.
+// SIGTERM, and exits the process on failure.
 func (b *Base) Serve(table string, workers ...func(context.Context) error) {
+	platform.Run(b.Log, b.servers(table, workers...)...)
+}
+
+// Run is Serve under a caller-supplied context (tests).
+func (b *Base) Run(ctx context.Context, table string, workers ...func(context.Context) error) error {
+	return platform.RunContext(ctx, b.servers(table, workers...)...)
+}
+
+func (b *Base) servers(table string, workers ...func(context.Context) error) []func(context.Context) error {
 	grpcAddr := platform.Env("GRPC_ADDR", ":9090")
 	adminAddr := platform.Env("ADMIN_ADDR", ":9100")
 	admin := platform.AdminServer(adminAddr, func(ctx context.Context) error {
@@ -105,7 +132,7 @@ func (b *Base) Serve(table string, workers ...func(context.Context) error) {
 		func(ctx context.Context) error { return b.GRPC.Serve(ctx, grpcAddr) },
 		func(ctx context.Context) error { return platform.ServeHTTP(ctx, b.Log, admin) },
 	}
-	platform.Run(b.Log, append(fns, workers...)...)
+	return append(fns, workers...)
 }
 
 // CacheWatcher returns a background worker that keeps this replica's local
