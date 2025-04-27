@@ -22,10 +22,12 @@ jobs:
     name: Lint and generated code
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
-          go-version-file: go.mod
+          # go.mod declares the minimum (1.26.0); CI uses the latest patch.
+          go-version: "1.26.x"
+          cache-dependency-path: go.sum
       - name: Install buf and protoc plugins
         run: |
           go install github.com/bufbuild/buf/cmd/buf@${BUF_VERSION}
@@ -40,7 +42,7 @@ jobs:
           test -z "$(git status --porcelain -- gen)"
       - name: go vet
         run: go vet ./...
-      - uses: golangci/golangci-lint-action@v8
+      - uses: golangci/golangci-lint-action@v9
         with:
           version: v2.15.0
 
@@ -57,10 +59,12 @@ jobs:
       REQUIRE_DYNAMODB: "1"
       REQUIRE_XMLLINT: "1"
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
-          go-version-file: go.mod
+          # go.mod declares the minimum (1.26.0); CI uses the latest patch.
+          go-version: "1.26.x"
+          cache-dependency-path: go.sum
       - name: Install xmllint (XSD validation in tests)
         run: sudo apt-get update -q && sudo apt-get install -y -q libxml2-utils
       - name: Test with race detector and coverage
@@ -69,7 +73,7 @@ jobs:
         run: |
           go tool cover -func=coverage.out | tail -1
           echo "### Coverage: $(go tool cover -func=coverage.out | tail -1 | awk '{print $3}')" >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: coverage
           path: coverage.out
@@ -82,11 +86,13 @@ jobs:
         image: amazon/dynamodb-local:latest
         ports: ["8000:8000"]
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
-          go-version-file: go.mod
-      - uses: actions/setup-node@v5
+          # go.mod declares the minimum (1.26.0); CI uses the latest patch.
+          go-version: "1.26.x"
+          cache-dependency-path: go.sum
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -107,7 +113,7 @@ jobs:
       - name: Service logs
         if: always()
         run: grep -E 'level=(WARN|ERROR)' dev.log | grep -v 'connection refused' | tail -50 || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report
@@ -120,7 +126,7 @@ jobs:
     name: Docker images and compose smoke test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Build images
         run: docker compose build
       - name: Start the stack
@@ -151,8 +157,8 @@ jobs:
       run:
         working-directory: deploy/terraform
     steps:
-      - uses: actions/checkout@v5
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: 1.17.2
       - run: terraform fmt -check -recursive
