@@ -2,6 +2,16 @@
 jQuery(function ($) {
   "use strict";
 
+  // Show as many placeholder cards as the student had last time, so the grid
+  // does not jump when the applications arrive (layout shift). Per browser,
+  // best effort: storage can be unavailable.
+  var COUNT_KEY = "wp_dashboard_apps";
+  function rememberedCount() {
+    try { return Math.min(+window.localStorage.getItem(COUNT_KEY) || 1, 6); } catch (e) { return 1; }
+  }
+  var $skeleton = $("#apps .skeleton").first();
+  for (var i = 1; i < rememberedCount(); i++) $("#apps").append($skeleton.clone());
+
   WP.requireRole("student").then(function (account) {
     WP.renderHeader(account);
     $("#greeting").text(WP.t("Welcome back, {name}.", { name: account.name }));
@@ -91,6 +101,7 @@ jQuery(function ($) {
       return da < db ? -1 : da > db ? 1 : 0;
     });
     $.each(apps, function (_, a) { $apps.append(card(a, byApp[a.id])); });
+    try { window.localStorage.setItem(COUNT_KEY, String(apps.length || 1)); } catch (e) { /* private mode */ }
     $("#apps-empty").prop("hidden", apps.length > 0);
     $("#export-all").prop("hidden", apps.length === 0);
 
