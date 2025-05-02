@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"hash/fnv"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -42,8 +43,10 @@ type CacheOptions struct {
 //   - Item cache: eventually consistent GetItem/BatchGetItem results
 //     (including "not found", cached for NegativeTTL) keyed by table+key.
 //   - Query cache: eventually consistent Query results keyed by the full
-//     request, valid until QueryTTL or until any write to that table through
-//     this client.
+//     request, valid until QueryTTL or until a write through this client
+//     that could change the result: base-table queries are invalidated by
+//     writes to the same partition key, index queries by writes that may
+//     touch the index.
 //   - ConsistentRead=true and ProjectionExpression requests bypass the cache,
 //     exactly like DAX passes strongly consistent reads through to DynamoDB.
 //
@@ -53,9 +56,15 @@ type CacheOptions struct {
 //  1. Cache misses are filled with a strongly consistent read, so a fill that
 //     happens right after a write can never cache the pre-write image.
 //  2. Each fill records a generation counter (per key stripe for items, per
-//     table for queries) before reading and only stores the result if no
-//     write bumped the counter in between. That closes the classic race where
-//     a slow reader caches a value that a concurrent writer just replaced.
+//     partition stripe or index for queries) before reading and only stores
+//     the result if no write bumped the counter in between. That closes the
+//     classic race where a slow reader caches a value that a concurrent
+//     writer just replaced.
+//
+// Invalidation is deliberately scoped: an earlier version used one counter
+// per table, so the timeline service's lease renewals (a write every few
+// seconds to an unrelated item) emptied every cached query in that table
+// and the query hit rate was ~50%.
 //
 // Across processes, staleness is bounded by the TTLs (same contract as DAX).
 type CachedAPI struct {
@@ -72,8 +81,10 @@ type CachedAPI struct {
 const stripes = 256
 
 type tableGen struct {
-	table   atomic.Uint64
-	stripes [stripes]atomic.Uint64
+	all     atomic.Uint64          // every write (fallback for unrecognised queries)
+	index   atomic.Uint64          // writes that may change a secondary index
+	stripes [stripes]atomic.Uint64 // item keys
+	parts   [stripes]atomic.Uint64 // partition keys (base-table queries)
 }
 
 // NewCachedAPI wraps next.
@@ -129,15 +140,50 @@ func stripe(k string) int {
 	return int(h.Sum32() % stripes)
 }
 
-// invalidate is called after every write to (table, key).
-func (c *CachedAPI) invalidate(table string, key map[string]types.AttributeValue) {
+// invalidate is called after every write to (table, key). index reports
+// whether the write may have changed a secondary index.
+func (c *CachedAPI) invalidate(table string, key map[string]types.AttributeValue, index bool) {
 	g := c.gen(table)
-	g.table.Add(1)
+	g.all.Add(1)
+	if index {
+		g.index.Add(1)
+	}
 	if key != nil {
 		k := itemKey(table, key)
 		g.stripes[stripe(k)].Add(1)
+		g.parts[stripe(partKey(table, key[PK]))].Add(1)
 		c.items.Delete(k)
 	}
+}
+
+// putTouchesIndex: a Put can only change the index if the new item carries
+// the index key (outbox events, leases and cursors never do).
+func putTouchesIndex(item map[string]types.AttributeValue) bool {
+	_, ok := item[GSI1PK]
+	return ok
+}
+
+func partKey(table string, pk types.AttributeValue) string {
+	var b strings.Builder
+	b.WriteString(table)
+	b.WriteByte(0)
+	writeAV(&b, pk)
+	return b.String()
+}
+
+var pkCond = regexp.MustCompile(`(?:^|[\s(])` + PK + `\s*=\s*(:[A-Za-z0-9_]+)`)
+
+// queryGen returns the generation counter that guards a query's result.
+func queryGen(g *tableGen, table string, in *dynamodb.QueryInput) *atomic.Uint64 {
+	if in.IndexName != nil {
+		return &g.index
+	}
+	if m := pkCond.FindStringSubmatch(aws.ToString(in.KeyConditionExpression)); m != nil {
+		if v, ok := in.ExpressionAttributeValues[m[1]]; ok {
+			return &g.parts[stripe(partKey(table, v))]
+		}
+	}
+	return &g.all
 }
 
 // --- reads ---------------------------------------------------------------
@@ -261,7 +307,8 @@ func (c *CachedAPI) Query(ctx context.Context, in *dynamodb.QueryInput, opts ...
 	}
 	table := aws.ToString(in.TableName)
 	g := c.gen(table)
-	before := g.table.Load()
+	gen := queryGen(g, table, in)
+	before := gen.Load()
 	k := queryKey(in, before)
 	if out, ok := c.queries.Get(k); ok {
 		cacheRequests.WithLabelValues("query", "hit").Inc()
@@ -275,7 +322,7 @@ func (c *CachedAPI) Query(ctx context.Context, in *dynamodb.QueryInput, opts ...
 		if err != nil {
 			return nil, err
 		}
-		if g.table.Load() == before {
+		if gen.Load() == before {
 			c.queries.Set(k, out)
 		}
 		return out, nil
@@ -290,19 +337,19 @@ func (c *CachedAPI) Query(ctx context.Context, in *dynamodb.QueryInput, opts ...
 
 func (c *CachedAPI) PutItem(ctx context.Context, in *dynamodb.PutItemInput, opts ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error) {
 	out, err := c.next.PutItem(ctx, in, opts...)
-	c.invalidate(aws.ToString(in.TableName), keyOf(in.Item))
+	c.invalidate(aws.ToString(in.TableName), keyOf(in.Item), putTouchesIndex(in.Item))
 	return out, err
 }
 
 func (c *CachedAPI) UpdateItem(ctx context.Context, in *dynamodb.UpdateItemInput, opts ...func(*dynamodb.Options)) (*dynamodb.UpdateItemOutput, error) {
 	out, err := c.next.UpdateItem(ctx, in, opts...)
-	c.invalidate(aws.ToString(in.TableName), in.Key)
+	c.invalidate(aws.ToString(in.TableName), in.Key, true)
 	return out, err
 }
 
 func (c *CachedAPI) DeleteItem(ctx context.Context, in *dynamodb.DeleteItemInput, opts ...func(*dynamodb.Options)) (*dynamodb.DeleteItemOutput, error) {
 	out, err := c.next.DeleteItem(ctx, in, opts...)
-	c.invalidate(aws.ToString(in.TableName), in.Key)
+	c.invalidate(aws.ToString(in.TableName), in.Key, true)
 	return out, err
 }
 
@@ -311,11 +358,11 @@ func (c *CachedAPI) TransactWriteItems(ctx context.Context, in *dynamodb.Transac
 	for _, it := range in.TransactItems {
 		switch {
 		case it.Put != nil:
-			c.invalidate(aws.ToString(it.Put.TableName), keyOf(it.Put.Item))
+			c.invalidate(aws.ToString(it.Put.TableName), keyOf(it.Put.Item), putTouchesIndex(it.Put.Item))
 		case it.Update != nil:
-			c.invalidate(aws.ToString(it.Update.TableName), it.Update.Key)
+			c.invalidate(aws.ToString(it.Update.TableName), it.Update.Key, true)
 		case it.Delete != nil:
-			c.invalidate(aws.ToString(it.Delete.TableName), it.Delete.Key)
+			c.invalidate(aws.ToString(it.Delete.TableName), it.Delete.Key, true)
 		}
 	}
 	return out, err
@@ -327,9 +374,9 @@ func (c *CachedAPI) BatchWriteItem(ctx context.Context, in *dynamodb.BatchWriteI
 		for _, r := range reqs {
 			switch {
 			case r.PutRequest != nil:
-				c.invalidate(table, keyOf(r.PutRequest.Item))
+				c.invalidate(table, keyOf(r.PutRequest.Item), putTouchesIndex(r.PutRequest.Item))
 			case r.DeleteRequest != nil:
-				c.invalidate(table, r.DeleteRequest.Key)
+				c.invalidate(table, r.DeleteRequest.Key, true)
 			}
 		}
 	}

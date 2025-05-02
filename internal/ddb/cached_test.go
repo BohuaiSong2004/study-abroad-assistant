@@ -306,3 +306,71 @@ func TestConnectModes(t *testing.T) {
 		t.Fatalf("env config %+v", cfg)
 	}
 }
+
+// Regression: query invalidation used to be table-wide, so an unrelated
+// write (the timeline consumer's lease renewal every few seconds) emptied
+// every cached query in the table.
+func TestQueryInvalidationIsScoped(t *testing.T) {
+	c, cnt, table := setup(t)
+	ctx := context.Background()
+	putRaw := func(item map[string]types.AttributeValue) {
+		t.Helper()
+		if _, err := c.PutItem(ctx, &dynamodb.PutItemInput{TableName: aws.String(table), Item: item}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	child := func(pk, sk string) map[string]types.AttributeValue { return ddb.Key(pk, sk) }
+	putRaw(child("STUDENT#1", "TL#a"))
+	putRaw(child("STUDENT#2", "TL#b"))
+	listStudent := func(id string) int {
+		out, err := c.Query(ctx, &dynamodb.QueryInput{
+			TableName:              aws.String(table),
+			KeyConditionExpression: aws.String("pk = :pk AND begins_with(sk, :p)"),
+			ExpressionAttributeValues: map[string]types.AttributeValue{
+				":pk": ddb.S("STUDENT#" + id), ":p": ddb.S("TL#"),
+			},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return len(out.Items)
+	}
+	listStudent("1")
+	before := cnt.queries.Load()
+
+	// Writes elsewhere in the table: another student, a lease, an outbox event.
+	putRaw(child("STUDENT#2", "TL#c"))
+	putRaw(child("LEASE#timeline.catalog", "LEASE"))
+	_, _ = c.UpdateItem(ctx, &dynamodb.UpdateItemInput{TableName: aws.String(table), Key: ddb.Key("CURSOR#x", "CURSOR"),
+		UpdateExpression: aws.String("SET seq = :s"), ExpressionAttributeValues: map[string]types.AttributeValue{":s": ddb.N(1)}})
+	if listStudent("1"); cnt.queries.Load() != before {
+		t.Fatal("unrelated writes invalidated a base-table query")
+	}
+	// A write to the same partition does invalidate.
+	putRaw(child("STUDENT#1", "TL#d"))
+	if n := listStudent("1"); n != 2 || cnt.queries.Load() != before+1 {
+		t.Fatalf("same-partition write not visible: n=%d", n)
+	}
+
+	// Index queries ignore Puts of items without index keys...
+	byIndex := func() int {
+		out, err := c.Query(ctx, &dynamodb.QueryInput{
+			TableName: aws.String(table), IndexName: aws.String(ddb.GSI1),
+			KeyConditionExpression:    aws.String("gsi1pk = :p"),
+			ExpressionAttributeValues: map[string]types.AttributeValue{":p": ddb.S("ALL")},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return len(out.Items)
+	}
+	byIndex()
+	before = cnt.queries.Load()
+	putRaw(child("EVT#catalog", ddb.Pad(1)))
+	if byIndex(); cnt.queries.Load() != before {
+		t.Fatal("a write without index keys invalidated an index query")
+	}
+	// ...but not Puts that carry them.
+	put(t, c, table, "indexed", "v")
+	testutil.Eventually(t, 3*time.Second, func() bool { return byIndex() == 1 }, "indexed write not visible")
+}
