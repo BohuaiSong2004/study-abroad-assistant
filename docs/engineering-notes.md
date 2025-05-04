@@ -167,3 +167,17 @@ estimate (current count plus the previous window's count weighted by its
 remaining overlap), and `Retry-After` is computed from when the estimate
 falls under the limit. `TestLockoutHoldsAcrossAWindowBoundary` reproduces
 the split.
+
+## 13. WebKit timeouts that were not the application's fault
+
+Adding Firefox and WebKit to the browser tests, the journey test failed on
+WebKit about one run in four: clicks waited forever for an element to be
+"stable", or the page never finished its first requests. Two theories were
+tested and dropped: downloads (`<a download>`) left in flight (failures
+persisted with the downloads replaced by requests), and the page being
+throttled after another browser context took the foreground
+(`document.visibilityState` stayed `visible`). What held: WebKit's animation
+frames took ~0.5 s against Chrome's ~30 ms on the 2-vCPU machine, and the
+test passed 8 of 8 runs with one worker against 6 of 8 with three. It was
+CPU starvation of three WebKit workers next to the stack. CI now runs each
+browser in its own job.

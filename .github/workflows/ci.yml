@@ -85,14 +85,20 @@ jobs:
           done
 
   e2e:
-    name: Browser tests (Playwright, CACHE_MODE=${{ matrix.cache }})
+    name: Browser tests (${{ matrix.browser }}, CACHE_MODE=${{ matrix.cache }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         # local: the default in-process cache; daxsim: the same cache with
         # DAX's weaker contract (writes do not invalidate cached queries).
-        cache: [local, daxsim]
+        # One browser per job: WebKit starves when it shares a runner's CPUs
+        # with other browsers and the stack.
+        include:
+          - { cache: local, browser: chromium, projects: --project=desktop --project=mobile }
+          - { cache: local, browser: firefox, projects: --project=firefox }
+          - { cache: local, browser: webkit, projects: --project=webkit }
+          - { cache: daxsim, browser: chromium, projects: --project=desktop --project=mobile }
     services:
       dynamodb:
         image: amazon/dynamodb-local:latest
@@ -126,17 +132,17 @@ jobs:
         working-directory: e2e
         run: |
           npm ci
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps ${{ matrix.browser }}
       - name: Run Playwright
         working-directory: e2e
-        run: npx playwright test
+        run: npx playwright test ${{ matrix.projects }}
       - name: Service logs
         if: always()
         run: grep -E 'level=(WARN|ERROR)' dev.log | grep -v 'connection refused' | tail -50 || true
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: playwright-report-${{ matrix.cache }}
+          name: playwright-report-${{ matrix.browser }}-${{ matrix.cache }}
           path: |
             e2e/playwright-report
             e2e/test-results
@@ -172,12 +178,25 @@ jobs:
           docker compose run --build --rm ctl status
           # A plaintext client on the same network is refused.
           ! docker compose run --rm -e GRPC_TLS_CA= -e GRPC_TLS_CERT= -e GRPC_TLS_KEY= -e WAYPOINTCTL_TIMEOUT=5s ctl status
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: Browser tests against the compose stack (mTLS, Mailpit)
+        working-directory: e2e
+        env:
+          E2E_MAILPIT_URL: http://localhost:8025
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npx playwright test --project=desktop --project=mobile
       - name: Logs
         if: always()
         run: docker compose logs --no-color | tail -200
 
   terraform:
-    name: Terraform validate
+    name: Terraform validate, lint and security scan
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -190,3 +209,14 @@ jobs:
       - run: terraform fmt -check -recursive
       - run: terraform init -backend=false -input=false
       - run: terraform validate
+      - name: tflint (with the AWS ruleset)
+        env:
+          GITHUB_TOKEN: ${{ github.token }} # plugin download
+        run: |
+          curl -sSfL -o /tmp/tflint.zip https://github.com/terraform-linters/tflint/releases/download/v0.59.1/tflint_linux_amd64.zip
+          sudo unzip -o -q /tmp/tflint.zip -d /usr/local/bin
+          tflint --init
+          tflint --format compact
+      - name: Checkov (every skip carries its reason in the code)
+        run: |
+          pipx run checkov==3.4.6 -d . --framework terraform --compact --quiet
