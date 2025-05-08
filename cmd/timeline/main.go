@@ -33,7 +33,8 @@ func main() {
 	consumer := func(name, stream string, cc eventsv1.EventStreamServiceClient, h events.Handler) *events.Consumer {
 		return events.NewConsumer(events.ConsumerConfig{
 			Name: name, Stream: stream, Client: cc, API: b.DB.API, Table: table, Handler: h, Log: b.Log,
-			Lease: events.NewLease(b.DB.API, table, name, b.Owner, leaseTTL),
+			Lease:   events.NewLease(b.DB.API, table, name, b.Owner, leaseTTL),
+			Workers: platform.EnvInt("CONSUMER_WORKERS", 8),
 		})
 	}
 	fromCatalog := consumer("timeline.catalog", "catalog", eventsv1.NewEventStreamServiceClient(catalogConn), syncer.HandleCatalog)

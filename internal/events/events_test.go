@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand/v2"
+	"sort"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -289,8 +292,10 @@ func TestConsumerResumesFromCursorRetriesAndParks(t *testing.T) {
 	done := make(chan struct{})
 	go func() { _ = c1.Run(cctx); close(done) }()
 	testutil.Eventually(t, 5*time.Second, func() bool { return len(rec.got()) == 3 }, "got %v", rec.got())
-	if fmt.Sprint(rec.got()) != "[e1 e2 e4]" {
-		t.Fatalf("got %v", rec.got())
+	// Different aggregates are applied in parallel, so only the set is fixed
+	// (per-aggregate order is covered by TestParallelApplyKeepsPerAggregateOrder).
+	if got := sorted(rec.got()); fmt.Sprint(got) != "[e1 e2 e4]" {
+		t.Fatalf("got %v", got)
 	}
 	testutil.Eventually(t, 2*time.Second, func() bool { return c1.Status().Cursor == 4 }, "cursor %d", c1.Status().Cursor)
 	cancel()
@@ -310,8 +315,8 @@ func TestConsumerResumesFromCursorRetriesAndParks(t *testing.T) {
 	go func() { _ = c2.Run(cctx2) }()
 	testutil.Eventually(t, 5*time.Second, func() bool { return len(rec.got()) == 4 }, "got %v", rec.got())
 	time.Sleep(200 * time.Millisecond)
-	if fmt.Sprint(rec.got()) != "[e1 e2 e4 e5]" {
-		t.Fatalf("after resume got %v", rec.got())
+	if got := sorted(rec.got()); fmt.Sprint(got) != "[e1 e2 e4 e5]" {
+		t.Fatalf("after resume got %v", got)
 	}
 }
 
@@ -365,5 +370,157 @@ func TestSubscribeOutlivesUnaryDeadline(t *testing.T) {
 	// Unary calls still work under the deadline.
 	if _, err := f.client.Head(context.Background(), &eventsv1.HeadRequest{}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func sorted(v []string) []string {
+	out := append([]string(nil), v...)
+	sort.Strings(out)
+	return out
+}
+
+func TestParallelApplyKeepsPerAggregateOrder(t *testing.T) {
+	f := newFixture(t, ServerOptions{})
+	ctx := context.Background()
+	const perAgg = 25
+	aggs := []string{"app_a", "app_b", "app_c", "app_d", "app_e"}
+	for i := 0; i < perAgg; i++ {
+		var specs []Spec
+		for _, a := range aggs {
+			specs = append(specs, Spec{Type: "test.value", AggregateID: a, Payload: wrapperspb.String(fmt.Sprintf("%s/%02d", a, i))})
+		}
+		if err := f.ob.Commit(ctx, nil, specs...); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var mu sync.Mutex
+	seen := map[string][]string{}
+	c := NewConsumer(ConsumerConfig{
+		Name: "order", Stream: "test", Client: f.client, API: f.api, Table: f.table, Log: testutil.Logger(t), Workers: 4,
+		Handler: func(_ context.Context, ev *eventsv1.Event) error {
+			time.Sleep(time.Duration(rand.IntN(3)) * time.Millisecond) // shuffle completion order
+			var v wrapperspb.StringValue
+			_ = ev.Payload.UnmarshalTo(&v)
+			mu.Lock()
+			seen[ev.AggregateId] = append(seen[ev.AggregateId], v.Value)
+			mu.Unlock()
+			return nil
+		},
+	})
+	cctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go func() { _ = c.Run(cctx) }()
+	total := perAgg * len(aggs)
+	testutil.Eventually(t, 10*time.Second, func() bool { return c.Status().Cursor == int64(total) }, "cursor %d", c.Status().Cursor)
+	mu.Lock()
+	defer mu.Unlock()
+	for _, a := range aggs {
+		if len(seen[a]) != perAgg || !sort.StringsAreSorted(seen[a]) {
+			t.Fatalf("aggregate %s applied out of order or incompletely: %v", a, seen[a])
+		}
+	}
+}
+
+func TestCursorNeverPassesAnUnfinishedEvent(t *testing.T) {
+	f := newFixture(t, ServerOptions{})
+	ctx := context.Background()
+	for i := 1; i <= 10; i++ {
+		if err := f.ob.Commit(ctx, nil, Spec{Type: "test.value", AggregateID: fmt.Sprintf("agg%d", i), Payload: wrapperspb.String(fmt.Sprintf("e%d", i))}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	release := make(chan struct{})
+	var mu sync.Mutex
+	var applied []string
+	handler := func(ctx context.Context, ev *eventsv1.Event) error {
+		var v wrapperspb.StringValue
+		_ = ev.Payload.UnmarshalTo(&v)
+		if v.Value == "e4" {
+			select { // a slow event, e.g. a large re-plan
+			case <-release:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
+		mu.Lock()
+		applied = append(applied, v.Value)
+		mu.Unlock()
+		return nil
+	}
+	mk := func() *Consumer {
+		return NewConsumer(ConsumerConfig{Name: "wm", Stream: "test", Client: f.client, API: f.api, Table: f.table, Log: testutil.Logger(t), Workers: 4, Handler: handler})
+	}
+	c1 := mk()
+	cctx, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
+	go func() { _ = c1.Run(cctx); close(done) }()
+	// Events on e4's worker queue behind it (head-of-line blocking within a
+	// partition); every other event completes.
+	expect := 0
+	for i := 1; i <= 10; i++ {
+		if i != 4 && (i < 4 || partition(fmt.Sprintf("agg%d", i), 4) != partition("agg4", 4)) {
+			expect++
+		}
+	}
+	testutil.Eventually(t, 5*time.Second, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return len(applied) == expect
+	}, "events not behind e4 should complete while it is stuck")
+	time.Sleep(200 * time.Millisecond) // give the committer time to (wrongly) run ahead
+	if cur := c1.Status().Cursor; cur != 3 {
+		t.Fatalf("cursor %d passed the unfinished event 4", cur)
+	}
+	cancel() // crash while e4 is in flight
+	<-done
+
+	// On restart e4..e10 are redelivered (at-least-once); e1..e3 are not.
+	mu.Lock()
+	applied = nil
+	mu.Unlock()
+	close(release)
+	c2 := mk()
+	cctx2, cancel2 := context.WithCancel(ctx)
+	defer cancel2()
+	go func() { _ = c2.Run(cctx2) }()
+	testutil.Eventually(t, 5*time.Second, func() bool { return c2.Status().Cursor == 10 }, "cursor %d", c2.Status().Cursor)
+	mu.Lock()
+	defer mu.Unlock()
+	got := strings.Join(sorted(applied), ",")
+	if strings.Contains(","+got+",", ",e1,") || strings.Contains(","+got+",", ",e3,") || !strings.Contains(got, "e4") {
+		t.Fatalf("redelivery after restart: %s", got)
+	}
+}
+
+func TestWatermarkFoldsCompletedPrefix(t *testing.T) {
+	w := newWatermark(0, 3)
+	for seq := int64(1); seq <= 3; seq++ {
+		if !w.dispatch(seq) {
+			t.Fatal("dispatch failed")
+		}
+	}
+	if m := w.complete(2); m != 0 {
+		t.Fatalf("mark %d after completing 2 before 1", m)
+	}
+	blocked := make(chan bool)
+	go func() { blocked <- w.dispatch(4) }() // limit reached: waits
+	select {
+	case <-blocked:
+		t.Fatal("dispatch should block at the in-flight limit")
+	case <-time.After(50 * time.Millisecond):
+	}
+	if m := w.complete(1); m != 2 {
+		t.Fatalf("mark %d, want 2", m)
+	}
+	if !<-blocked {
+		t.Fatal("dispatch should resume after completions")
+	}
+	w.complete(4)
+	if m := w.complete(3); m != 4 {
+		t.Fatalf("mark %d, want 4", m)
+	}
+	w.close()
+	if w.dispatch(5) {
+		t.Fatal("dispatch after close")
 	}
 }

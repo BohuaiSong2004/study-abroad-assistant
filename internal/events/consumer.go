@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"log/slog"
 	"math/rand/v2"
@@ -76,6 +77,9 @@ type Consumer struct {
 	lease   *Lease
 	log     *slog.Logger
 
+	workers     int
+	commitEvery time.Duration
+
 	mu sync.Mutex
 	st Status
 }
@@ -92,13 +96,25 @@ type ConsumerConfig struct {
 	// unconditionally (single replica or tests).
 	Lease *Lease
 	Log   *slog.Logger
+	// Workers applies events for different aggregates in parallel (default
+	// 8); events for the same aggregate are always applied in order.
+	Workers int
+	// CommitEvery bounds how often the cursor is written (default 50ms).
+	CommitEvery time.Duration
 }
 
 // NewConsumer creates a consumer.
 func NewConsumer(c ConsumerConfig) *Consumer {
+	if c.Workers <= 0 {
+		c.Workers = 8
+	}
+	if c.CommitEvery <= 0 {
+		c.CommitEvery = 50 * time.Millisecond
+	}
 	return &Consumer{
 		name: c.Name, stream: c.Stream, client: c.Client, api: c.API, table: c.Table,
 		handler: c.Handler, lease: c.Lease, log: c.Log.With("consumer", c.Name),
+		workers: c.Workers, commitEvery: c.CommitEvery,
 		st: Status{Name: c.Name, Stream: c.Stream},
 	}
 }
@@ -171,27 +187,132 @@ func (c *Consumer) loop(ctx context.Context) error {
 
 // session runs one Subscribe call until the stream breaks. healthy reports
 // whether it received anything (so the caller can reset its backoff).
+//
+// Events are applied by Workers goroutines in parallel, partitioned by
+// aggregate id: two events about the same application always go to the same
+// worker, in stream order, while different applications proceed
+// independently. The cursor only advances to the watermark (every event up
+// to it is applied), so after a crash the consumer resumes no later than the
+// oldest unfinished event and handlers see at most a redelivery.
 func (c *Consumer) session(ctx context.Context) (healthy bool, err error) {
 	cursor, err := c.loadCursor(ctx)
 	if err != nil {
 		return false, fmt.Errorf("load cursor: %w", err)
 	}
 	c.update(func(s *Status) { s.Cursor = cursor })
-	sctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	sctx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
 	stream, err := c.client.Subscribe(sctx, &eventsv1.SubscribeRequest{AfterSeq: cursor})
 	if err != nil {
 		return false, err
 	}
+
+	wm := newWatermark(cursor, c.workers*64)
+	go func() { <-sctx.Done(); wm.close() }() // never leave the dispatcher blocked
+	advanced := make(chan struct{}, 1)
+	queues := make([]chan *eventsv1.Event, c.workers)
+	var wg sync.WaitGroup
+	for i := range queues {
+		queues[i] = make(chan *eventsv1.Event, 64)
+		wg.Add(1)
+		go func(q chan *eventsv1.Event) {
+			defer wg.Done()
+			for ev := range q {
+				if sctx.Err() != nil {
+					continue // drain after a failure; the watermark stops here
+				}
+				if err := c.apply(sctx, ev); err != nil {
+					cancel(err)
+					wm.close()
+					continue
+				}
+				consumerApplied.WithLabelValues(c.name).Inc()
+				syncLatency.WithLabelValues(c.name).Observe(time.Since(ev.OccurredAt.AsTime()).Seconds())
+				wm.complete(ev.Seq)
+				c.update(func(s *Status) {
+					s.Applied++
+					if t := ev.OccurredAt.AsTime(); t.After(s.LastEventAt) {
+						s.LastEventAt = t
+					}
+				})
+				select {
+				case advanced <- struct{}{}:
+				default:
+				}
+			}
+		}(queues[i])
+	}
+
+	// The committer persists the watermark, coalescing bursts of completions.
+	saved := cursor
+	save := func(sctx context.Context) error {
+		mark := wm.current()
+		if mark <= saved {
+			return nil
+		}
+		if err := c.saveCursor(sctx, mark); err != nil {
+			return err
+		}
+		saved = mark
+		c.update(func(s *Status) { s.Cursor, s.Head = mark, max(s.Head, mark) })
+		return nil
+	}
+	commitDone := make(chan struct{})
+	go func() {
+		defer close(commitDone)
+		tick := time.NewTicker(c.commitEvery)
+		defer tick.Stop()
+		for {
+			select {
+			case <-sctx.Done():
+				return
+			case <-advanced:
+			case <-tick.C:
+			}
+			if err := save(sctx); err != nil && sctx.Err() == nil {
+				cancel(fmt.Errorf("save cursor: %w", err))
+				wm.close()
+				return
+			}
+			select { // pace commits: at most one write per interval under load
+			case <-sctx.Done():
+				return
+			case <-time.After(c.commitEvery):
+			}
+		}
+	}()
+
+	recvErr := c.dispatchLoop(sctx, stream, wm, queues, cursor, &healthy)
+	for _, q := range queues {
+		close(q)
+	}
+	wg.Wait()
+	cancel(recvErr)
+	<-commitDone
+	// Persist whatever finished before the stream broke.
+	fctx, fcancel := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
+	defer fcancel()
+	if err := save(fctx); err != nil {
+		c.log.Warn("could not save final cursor; events after it will be redelivered", "error", err)
+	}
+	if cause := context.Cause(sctx); cause != nil && !errors.Is(cause, context.Canceled) && !errors.Is(cause, io.EOF) {
+		return healthy, cause
+	}
+	return healthy, nil
+}
+
+// dispatchLoop receives events and routes them to workers by aggregate.
+func (c *Consumer) dispatchLoop(ctx context.Context, stream eventsv1.EventStreamService_SubscribeClient, wm *watermark, queues []chan *eventsv1.Event, cursor int64, healthy *bool) error {
+	last := cursor
 	for {
 		msg, err := stream.Recv()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return healthy, nil
+				return io.EOF
 			}
-			return healthy, err
+			return err
 		}
-		healthy = true
+		*healthy = true
 		consumerConnected.WithLabelValues(c.name).Set(1)
 		c.update(func(s *Status) { s.Connected = true })
 		switch k := msg.Kind.(type) {
@@ -199,25 +320,27 @@ func (c *Consumer) session(ctx context.Context) (healthy bool, err error) {
 			c.update(func(s *Status) { s.Head = max(s.Head, k.Heartbeat.HeadSeq) })
 		case *eventsv1.SubscribeResponse_Event:
 			ev := k.Event
-			if ev.Seq <= cursor {
+			if ev.Seq <= last {
 				continue // duplicate from a racing reconnect
 			}
-			if err := c.apply(ctx, ev); err != nil {
-				return healthy, err
+			if !wm.dispatch(ev.Seq) {
+				return context.Cause(ctx)
 			}
-			cursor = ev.Seq
-			if err := c.saveCursor(ctx, cursor); err != nil {
-				return healthy, fmt.Errorf("save cursor: %w", err)
+			last = ev.Seq
+			c.update(func(s *Status) { s.Head = max(s.Head, ev.Seq) })
+			select {
+			case queues[partition(ev.AggregateId, len(queues))] <- ev:
+			case <-ctx.Done():
+				return context.Cause(ctx)
 			}
-			consumerApplied.WithLabelValues(c.name).Inc()
-			syncLatency.WithLabelValues(c.name).Observe(time.Since(ev.OccurredAt.AsTime()).Seconds())
-			c.update(func(s *Status) {
-				s.Cursor, s.Head = cursor, max(s.Head, cursor)
-				s.LastEventAt = ev.OccurredAt.AsTime()
-				s.Applied++
-			})
 		}
 	}
+}
+
+func partition(key string, n int) int {
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(key))
+	return int(h.Sum32() % uint32(n))
 }
 
 // apply runs the handler, retrying transient failures with backoff. Events

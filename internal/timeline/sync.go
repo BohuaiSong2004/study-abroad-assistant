@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"time"
 
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -40,14 +41,16 @@ type Syncer struct {
 	log          *slog.Logger
 	now          func() time.Time
 	RecheckDelay time.Duration
-	root         context.Context
-	stop         context.CancelFunc
+	// ReplanParallelism bounds concurrent re-plans after a program change.
+	ReplanParallelism int
+	root              context.Context
+	stop              context.CancelFunc
 }
 
 // NewSyncer creates a syncer.
 func NewSyncer(store *Store, cc catalogv1.CatalogServiceClient, log *slog.Logger) *Syncer {
 	root, stop := context.WithCancel(context.Background())
-	return &Syncer{store: store, catalog: cc, log: log, now: time.Now, RecheckDelay: 3 * time.Second, root: root, stop: stop}
+	return &Syncer{store: store, catalog: cc, log: log, now: time.Now, RecheckDelay: 3 * time.Second, ReplanParallelism: 8, root: root, stop: stop}
 }
 
 // Close cancels pending background rechecks.
@@ -95,15 +98,21 @@ func (s *Syncer) replanProgram(ctx context.Context, p *catalogv1.Program) error 
 	if err != nil {
 		return err
 	}
+	// Timelines are independent items: re-plan them with bounded parallelism.
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(s.ReplanParallelism)
 	for _, ref := range stale {
-		if err := s.upsert(ctx, ref[0], ref[1], func(prev *record) (*record, error) {
-			if prev == nil || prev.tl.ProgramVersion >= p.Version {
-				return nil, nil
-			}
-			return &record{tl: Plan(p, prev.app, prev.tl, s.now()), app: prev.app}, nil
-		}); err != nil {
-			return err
-		}
+		g.Go(func() error {
+			return s.upsert(gctx, ref[0], ref[1], func(prev *record) (*record, error) {
+				if prev == nil || prev.tl.ProgramVersion >= p.Version {
+					return nil, nil
+				}
+				return &record{tl: Plan(p, prev.app, prev.tl, s.now()), app: prev.app}, nil
+			})
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return err
 	}
 	if len(stale) > 0 {
 		s.log.Info("re-planned timelines after program change", "program_id", p.Id, "version", p.Version, "timelines", len(stale))
