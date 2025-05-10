@@ -18,6 +18,7 @@ resource "aws_sesv2_email_identity" "sender" {
 }
 
 resource "aws_iam_user" "smtp" {
+  #checkov:skip=CKV_AWS_273:SES SMTP credentials can only be derived from an IAM user access key; the user can do nothing but send mail
   name = "${local.name}-smtp"
   path = "/system/"
 }
@@ -35,6 +36,7 @@ data "aws_iam_policy_document" "smtp_send" {
 }
 
 resource "aws_iam_user_policy" "smtp_send" {
+  #checkov:skip=CKV_AWS_40:A single-purpose SMTP user; a group would add indirection without reducing privilege
   name   = "send-from-${local.name}"
   user   = aws_iam_user.smtp.name
   policy = data.aws_iam_policy_document.smtp_send.json
@@ -45,6 +47,8 @@ resource "aws_iam_access_key" "smtp" {
 }
 
 resource "aws_secretsmanager_secret" "smtp" {
+  #checkov:skip=CKV_AWS_149:Encrypted with the AWS-managed key; a customer-managed KMS key is warranted for cross-account or key-policy separation requirements, not here
+  #checkov:skip=CKV2_AWS_57:Derived from the IAM access key; rotate by replacing aws_iam_access_key.smtp (terraform apply -replace)
   name                    = "${local.name}/smtp"
   recovery_window_in_days = 7
 }

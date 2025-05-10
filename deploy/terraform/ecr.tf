@@ -1,4 +1,5 @@
 resource "aws_ecr_repository" "service" {
+  #checkov:skip=CKV_AWS_136:Encrypted with the AWS-managed key; a customer-managed KMS key is warranted for cross-account or key-policy separation requirements, not here
   for_each             = toset(["gateway", "catalog", "applications", "timeline", "seed"])
   name                 = "${local.name}/${each.key}"
   image_tag_mutability = "IMMUTABLE"

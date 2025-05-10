@@ -5,6 +5,8 @@ resource "random_password" "internal_token" {
 }
 
 resource "aws_secretsmanager_secret" "internal_token" {
+  #checkov:skip=CKV_AWS_149:Encrypted with the AWS-managed key; a customer-managed KMS key is warranted for cross-account or key-policy separation requirements, not here
+  #checkov:skip=CKV2_AWS_57:Rotating it needs a coordinated restart of every task; rotation is a documented manual runbook step, not a Lambda
   name                    = "${local.name}/internal-token"
   recovery_window_in_days = 7
 }
@@ -20,6 +22,8 @@ resource "random_password" "counselor" {
 }
 
 resource "aws_secretsmanager_secret" "counselor_password" {
+  #checkov:skip=CKV_AWS_149:Encrypted with the AWS-managed key; a customer-managed KMS key is warranted for cross-account or key-policy separation requirements, not here
+  #checkov:skip=CKV2_AWS_57:Used once, to create the first counselor account; the counselor changes the password afterwards
   name                    = "${local.name}/bootstrap-counselor-password"
   recovery_window_in_days = 7
 }

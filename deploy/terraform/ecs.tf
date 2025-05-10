@@ -19,6 +19,7 @@ resource "aws_vpc_security_group_ingress_rule" "tasks_from_alb" {
   ip_protocol                  = "tcp"
   from_port                    = 8080
   to_port                      = 8080
+  description                  = "Gateway HTTP from the load balancer"
 }
 
 resource "aws_vpc_security_group_ingress_rule" "tasks_grpc" {
@@ -32,6 +33,7 @@ resource "aws_vpc_security_group_ingress_rule" "tasks_grpc" {
 
 resource "aws_vpc_security_group_egress_rule" "tasks_all" {
   security_group_id = aws_security_group.tasks.id
+  description       = "AWS APIs (via NAT and the DynamoDB endpoint), SES and image pulls"
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "-1"
 }
@@ -60,9 +62,10 @@ resource "aws_service_discovery_service" "backend" {
 }
 
 resource "aws_cloudwatch_log_group" "service" {
+  #checkov:skip=CKV_AWS_158:Encrypted with the AWS-managed key; a customer-managed KMS key is warranted for cross-account or key-policy separation requirements, not here
   for_each          = var.services
   name              = "/ecs/${local.name}/${each.key}"
-  retention_in_days = 30
+  retention_in_days = var.log_retention_days
 }
 
 locals {

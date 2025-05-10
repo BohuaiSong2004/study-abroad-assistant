@@ -111,3 +111,15 @@ variable "smtp_addr" {
   type        = string
   default     = ""
 }
+
+variable "log_retention_days" {
+  description = "CloudWatch retention for service and VPC flow logs."
+  type        = number
+  default     = 365
+}
+
+variable "deletion_protection" {
+  description = "Protect the load balancer from accidental deletion (turn off to tear down a test environment)."
+  type        = bool
+  default     = true
+}

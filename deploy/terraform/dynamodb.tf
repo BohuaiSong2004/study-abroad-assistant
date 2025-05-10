@@ -5,6 +5,7 @@ locals {
 }
 
 resource "aws_dynamodb_table" "service" {
+  #checkov:skip=CKV_AWS_119:Encrypted with the AWS-managed key; a customer-managed KMS key is warranted for cross-account or key-policy separation requirements, not here
   for_each                    = local.tables
   name                        = "${local.name}-${each.key}"
   billing_mode                = "PAY_PER_REQUEST"
