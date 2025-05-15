@@ -3,10 +3,13 @@
 Everything here was measured on **one machine**, so the numbers describe this
 code on this hardware, not a production deployment:
 
-- 2 vCPU Intel Xeon @ 2.10 GHz, 7.8 GB RAM, Linux
-- services in Docker Compose (`docker compose up --build`), DynamoDB Local
-  (`amazon/dynamodb-local`, in memory) in Docker, k6 1.8 on the same machine
-- commit `54bb840` (November 2026)
+- 2 vCPU Intel Xeon @ 2.10 GHz, 7.8 GB RAM, Linux (a shared VM)
+- services in Docker Compose (`docker compose up --build`, internal gRPC over
+  mutual TLS), DynamoDB Local (`amazon/dynamodb-local`, in memory) in Docker,
+  k6 1.8 on the same machine
+- sections 1 and 3 to 6 re-measured at commit `b175ed9` on 23 November 2026;
+  section 2 and the parallel-apply comparison were measured at `54bb840` on
+  22 November (their code paths have not changed since)
 
 **Not measured:** Amazon DAX or real DynamoDB (there is no AWS deployment), and
 real user traffic. "Cache" below is the in-process DAX-style read-through cache
@@ -15,7 +18,10 @@ real user traffic. "Cache" below is the in-process DAX-style read-through cache
 latency than DynamoDB Local on localhost, which tends to make a cache *more*
 valuable, not less. Treat the percentages as a property of this setup.
 
-Runs vary by roughly ±10–15% between repetitions on this shared VM.
+Runs vary by roughly ±10–15% between repetitions on this shared VM, and by
+more between days: on 23 November the same commit (`54bb840`) was about twice
+as slow under the sync burst as on 22 November (section 3), so compare rows
+measured on the same day, not across days.
 
 ## 1. Read path: cache off vs on (k6, end to end)
 
@@ -38,32 +44,34 @@ Latency without CPU contention, i.e. the cache's own effect.
 
 | Endpoint | off: median / p95 | local: median / p95 | Median change |
 | --- | --- | --- | --- |
-| GET timeline | 3.24 / 7.09 ms | 1.51 / 3.98 ms | −53% |
-| GET program | 2.93 / 5.34 ms | 1.36 / 2.57 ms | −54% |
-| GET timelines (list) | 3.85 / 8.30 ms | 1.76 / 5.89 ms | −54% |
-| Search programs | 12.18 / 42.1 ms | 1.68 / 11.4 ms | −86% |
-| GET applications (consistent, control) | 3.61 / 7.93 ms | 3.64 / 6.00 ms | ±0% |
+| GET timeline | 3.63 / 7.65 ms | 1.93 / 6.24 ms | −47% |
+| GET program | 3.29 / 6.10 ms | 1.61 / 2.81 ms | −51% |
+| GET timelines (list) | 4.34 / 9.27 ms | 2.44 / 8.07 ms | −44% |
+| Search programs | 10.49 / 46.7 ms | 2.07 / 14.1 ms | −80% |
+| GET applications (consistent, control) | 3.93 / 8.39 ms | 4.26 / 9.44 ms | +8% (noise) |
 
-The control endpoint does not change, as it should not: the difference on the
-other rows is the cache.
+The control endpoint stays within run-to-run noise, as it should: the
+difference on the other rows is the cache.
 
 ### Saturated: 20 concurrent clients, no think time (closed loop)
 
 | | off | local |
 | --- | --- | --- |
-| Throughput (all endpoints) | 359 req/s | 1,659 req/s (4.6×) |
-| GET timeline median / p95 | 29.8 / 62.1 ms | 9.2 / 23.6 ms (−69% / −62%) |
-| GET program median / p95 | 30.8 / 58.3 ms | 8.3 / 22.5 ms (−73% / −61%) |
-| Search median / p95 | 93.2 / 404 ms | 8.8 / 24.9 ms (−91% / −94%) |
-| GET applications (control) median | 30.1 ms | 11.8 ms |
+| Throughput (all endpoints) | 287 req/s | 1,277 req/s (4.4×) |
+| GET timeline median / p95 | 36.2 / 90.7 ms | 12.6 / 32.1 ms (−65% / −65%) |
+| GET program median / p95 | 36.2 / 72.8 ms | 9.9 / 27.7 ms (−73% / −62%) |
+| Search median / p95 | 97.1 / 474 ms | 10.7 / 30.5 ms (−89% / −94%) |
+| GET applications (control) median | 37.0 ms | 14.7 ms |
 
 Under saturation the control also gets faster: the cache frees CPU that
 DynamoDB Local (a JVM on the same two cores) was using, so part of these
 numbers is reduced contention rather than cache hits.
 
-Cache hit ratios after the two `local` runs (from
-`waypoint_ddb_cache_requests_total`): timeline items 99.1%, timeline queries
-98.5%, catalog items 99.3%, catalog queries 99.1%.
+On 22 November, before compose used mutual TLS, the same mix ran at 359 vs
+1,659 req/s (4.6×); every internal call now also pays for TLS. Cache hit
+ratios measured then (from `waypoint_ddb_cache_requests_total`): timeline
+items 99.1%, timeline queries 98.5%, catalog items 99.3%, catalog queries
+99.1%.
 
 ## 2. Store level: `GetItem` with and without the cache
 
@@ -94,11 +102,17 @@ the timeline reflects the change.
 
 | Scenario | Server p50 / p95 | Client p50 / p95 | Errors |
 | --- | --- | --- | --- |
-| 5 students (25 changes), low load | 22.5 / 49.3 ms | 58 / 70 ms | 0 |
-| 100 students at once (500 changes in ~10 s) | 997 ms / 2.35 s | 0.89 / 1.62 s | 0 |
+| 5 students (25 changes), low load | 38.1 / 79.2 ms | 63 / 77 ms | 0 |
+| 100 students at once (500 changes), three runs | 1.79–2.25 s / 4.28–4.85 s | 1.70–2.06 s / 2.85–3.92 s | 0 |
+| same burst, commit `54bb840`, same day | 2.76 / 5.54 s | 2.36 / 4.21 s | 0 |
 
-The burst row is a 2-vCPU machine running k6, five services and DynamoDB Local
-while 100 clients poll: latency there is queueing.
+The burst rows are a 2-vCPU machine running k6, five services and DynamoDB
+Local while 100 clients poll every 50 ms: latency there is queueing. On 22
+November `54bb840` measured 0.89 / 1.62 s client-side for this burst; the
+same build was much slower on the 23rd, which is why the current code is
+compared with it on the same day. Since then, sync handlers read the program
+projection with strong consistency and every replica tails its own outbox
+(cache coherence), and the current code is still faster than `54bb840` under the same burst on the same day.
 
 ### Parallel apply (same build, `CONSUMER_WORKERS` / `REPLAN_PARALLELISM`)
 
@@ -114,19 +128,23 @@ Before the change, the consumer applied one event at a time; see
 
 `loadtest/k6/fanout.js`: 300 students apply to the same program; a counselor
 moves its deadline; the script polls all 300 timelines until each shows the new
-date. **300/300 re-planned in 1.99 s and 2.25 s** (two runs), including the
-time to poll 300 timelines per round.
+date. **300/300 re-planned in 3.88 s and 3.68 s** (two runs on 23 November),
+including the time to poll 300 timelines per round. On 22 November the same
+test took 1.99 s and 2.25 s; see section 3 for the day-to-day difference.
 
 ## 5. Sign-up capacity
 
 Accounts are created with argon2id (19 MiB memory, t = 2), with at most 4
 hashes in flight per applications replica. Sequential sign-ups through the
-gateway: **24–26 per second** on this machine. A burst of 100 simultaneous
+gateway (`k6 run loadtest/k6/signups.js`): **19–20.5 per second** in three runs
+on 23 November (24–26 on 22 November, before each sign-up also updated the
+shared per-address limit in DynamoDB). A burst of 100 simultaneous
 sign-ups queues behind the hashing limit and some requests reach the gateway's
 5 s backend deadline (504) — by design, the service sheds load instead of
 running out of memory. The load tests therefore create accounts up front and
-run with `AUTH_RATE_PER_MIN` raised (the per-IP limiter otherwise stops one
-machine from creating hundreds of accounts a minute).
+run with `AUTH_RATE_PER_MIN` raised and the shared per-address limits raised
+(docker compose does the latter), since one machine creating hundreds of
+accounts a minute is exactly what the limits stop.
 
 ## 6. Lighthouse
 
@@ -135,10 +153,17 @@ Docker stack; signed-in pages with a session cookie:
 
 | Page | Performance | Accessibility | Best practices | SEO | CLS |
 | --- | --- | --- | --- | --- | --- |
-| `/` | 100 | 100 | 100 | 100 | 0 |
+| `/` | 99 | 100 | 100 | 100 | 0 |
 | `/programs.html` | 99 | 100 | 100 | 100 | 0 |
-| `/dashboard.html` | 97 | 100 | 100 | 100 | 0.10 |
+| `/dashboard.html` (1 application) | 99 | 100 | 100 | 100 | 0.005 |
+| `/dashboard.html` (3 applications, first visit) | 99 | 100 | 100 | 100 | 0.082 |
 | `/application.html` | 99 | 100 | 100 | 100 | 0 |
+| `/dashboard.html`, Chinese | 97 | 100 | 100 | 100 | 0.005 |
+| `/application.html`, Chinese | 99 | 100 | 100 | 100 | 0 |
+
+Lighthouse starts with an empty profile, so the dashboard draws one
+placeholder card; a returning student's browser draws as many as they had
+last time, which avoids the remaining shift.
 
 The first run scored 76–86 on the signed-in pages (CLS up to 0.65) and found a
 colour-contrast failure; the fixes are in the
@@ -155,6 +180,7 @@ AUTH_RATE_PER_MIN=100000 docker compose up -d gateway
 k6 run loadtest/k6/writes.js                                  # section 3
 VUS=5 k6 run loadtest/k6/writes.js
 k6 run loadtest/k6/fanout.js                                  # section 4
+k6 run loadtest/k6/signups.js                                 # section 5
 # server-side sync latency (timeline admin port is on the compose network):
 docker run --rm --network waypoint_default curlimages/curl -s http://timeline:9103/metrics \
   | python3 loadtest/histogram.py - waypoint_sync_latency_seconds

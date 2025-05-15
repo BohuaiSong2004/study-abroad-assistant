@@ -103,15 +103,18 @@ up on reload.
 
 | Suite | What | Run |
 | --- | --- | --- |
-| Go unit + integration | 59 test functions: planner rules, cache races, outbox gaps and tombstones, consumer resume/watermark/leases, full services over in-memory gRPC, gateway HTTP (CSRF, rate limits, SSE, XML) | `DYNAMODB_ENDPOINT=http://localhost:8000 go test -race ./...` |
+| Go unit + integration | 91 test functions: planner rules, cache races and cross-replica coherence, DAX semantics, outbox gaps and tombstones, consumer resume/watermark/leases/dead letters, full services over in-memory gRPC, shared rate limits and lockout, password reset, mutual TLS, gateway HTTP (CSRF, SSE, XML, language negotiation), Chinese dictionary completeness | `DYNAMODB_ENDPOINT=http://localhost:8000 go test -race ./...` |
 | XML schemas | Every export validated with `xmllint` against the XSDs | part of the Go tests (needs `libxml2-utils`) |
-| Browser (Playwright) | 16 end-to-end tests incl. live sync, no-JavaScript sign-in, axe accessibility, mobile layout | `cd e2e && npm ci && npx playwright install chromium && npx playwright test` (stack running) |
+| Browser (Playwright) | 20 end-to-end tests on Chromium, Firefox and WebKit: live sync, no-JavaScript sign-in, lockout, emails read from Mailpit, Chinese UI, axe accessibility, mobile layout | `cd e2e && npm ci && npx playwright install chromium && npx playwright test --project=desktop --project=mobile` (stack running; `E2E_MAILPIT_URL=http://localhost:8025` for the email tests) |
 | Load (k6) | cache on/off, concurrent writes, deadline fan-out | see [docs/performance.md](docs/performance.md) |
 
-Application-code coverage is about 83% (`go test -coverpkg=./internal/...`).
-CI runs lint (golangci-lint, `buf lint`, generated-code check), the Go suites
-against DynamoDB Local, Playwright against the dev-mode stack, a Docker Compose
-smoke test and `terraform validate`.
+Application-code coverage is about 84% (`go test -coverpkg=./internal/...`).
+CI runs lint (golangci-lint, `buf lint`, generated-code check); the Go suites
+against DynamoDB Local, and the system tests again with the cache off and with
+DAX semantics; Playwright per browser against the dev-mode stack (and with
+`CACHE_MODE=daxsim`); the Docker images with a compose smoke test, a check
+that internal gRPC refuses plaintext, and Playwright against compose; and
+`terraform validate`, tflint and Checkov.
 
 ## Performance (measured locally)
 
@@ -120,17 +123,19 @@ and raw numbers in [docs/performance.md](docs/performance.md).
 
 | | `CACHE_MODE=off` | `CACHE_MODE=local` |
 | --- | --- | --- |
-| `GET /timeline` median, 50 req/s | 3.24 ms | 1.51 ms (−53%) |
-| `GET /programs/{id}` median, 50 req/s | 2.93 ms | 1.36 ms (−54%) |
-| Program search median, 50 req/s | 12.2 ms | 1.7 ms (−86%) |
-| Strongly consistent list (never cached, control) | 3.61 ms | 3.64 ms |
-| Read mix throughput, 20 concurrent clients | 359 req/s | 1,659 req/s |
+| `GET /timeline` median, 50 req/s | 3.63 ms | 1.93 ms (−47%) |
+| `GET /programs/{id}` median, 50 req/s | 3.29 ms | 1.61 ms (−51%) |
+| Program search median, 50 req/s | 10.5 ms | 2.1 ms (−80%) |
+| Strongly consistent list (never cached, control) | 3.93 ms | 4.26 ms |
+| Read mix throughput, 20 concurrent clients | 287 req/s | 1,277 req/s (4.4×) |
 | Cache hit ratio (timeline / catalog items) | — | 99% / 99% |
 
-Sync: a change is applied to the timeline in **22 ms median** (p95 49 ms) at
-low load; a burst of 100 students making 500 changes in ~10 s is fully synced
-with 0 errors (server-side p95 2.3 s); a deadline change re-plans **300
-timelines in ~2 s**.
+Sync: a change is applied to the timeline in **38 ms median** (p95 79 ms) at
+low load; a burst of 100 students making 500 changes is fully synced with 0
+errors (client-observed p50 1.7–2.1 s on a VM where the previous build took
+2.4 s that day); a deadline change re-plans **300 timelines in ~3.8 s**.
+Lighthouse (mobile): performance 97–99, accessibility, best practices and SEO
+100 on every page, in English and Chinese.
 
 ## Operations
 
