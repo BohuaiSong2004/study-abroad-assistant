@@ -12,6 +12,7 @@ import (
 	grpcprom "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health"
@@ -167,6 +168,12 @@ func (s *ctxStream) Context() context.Context { return s.ctx }
 // every write is guarded by a DynamoDB condition (version or
 // attribute_not_exists).
 //
+// waitForReady: while a backend restarts (a deploy, a crashed pod), calls
+// wait for the channel to reconnect, bounded by their deadline, instead of
+// failing fast with UNAVAILABLE. Without it the gateway returned 503s for a
+// few hundred milliseconds after every backend restart, until the channel's
+// reconnect backoff expired.
+//
 // The long-lived EventStreamService/Subscribe stream must NOT inherit the
 // default timeout: an earlier version applied it to every method, which
 // killed each sync stream after 10 seconds. A method-specific entry wins
@@ -177,6 +184,7 @@ func serviceConfig(unaryTimeout time.Duration) string {
   "methodConfig": [
     {
       "name": [{}],
+      "waitForReady": true,
       "timeout": "%.3fs",
       "retryPolicy": {
         "maxAttempts": 4,
@@ -187,7 +195,8 @@ func serviceConfig(unaryTimeout time.Duration) string {
       }
     },
     {
-      "name": [{"service": "waypoint.events.v1.EventStreamService", "method": "Subscribe"}]
+      "name": [{"service": "waypoint.events.v1.EventStreamService", "method": "Subscribe"}],
+      "waitForReady": true
     }
   ]
 }`, unaryTimeout.Seconds())
@@ -205,6 +214,12 @@ func DialOptions(internalToken string, unaryTimeout time.Duration) []grpc.DialOp
 		grpc.WithChainUnaryInterceptor(clientMetrics.UnaryClientInterceptor(), ClientUnaryInterceptor(internalToken)),
 		grpc.WithChainStreamInterceptor(clientMetrics.StreamClientInterceptor(), ClientStreamInterceptor(internalToken)),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: 10 * time.Second, PermitWithoutStream: true}),
+		// Reconnect quickly after a backend restart (gRPC's default backoff
+		// grows to two minutes).
+		grpc.WithConnectParams(grpc.ConnectParams{
+			Backoff:           backoff.Config{BaseDelay: 100 * time.Millisecond, Multiplier: 1.6, Jitter: 0.2, MaxDelay: 2 * time.Second},
+			MinConnectTimeout: 2 * time.Second,
+		}),
 	}
 }
 
