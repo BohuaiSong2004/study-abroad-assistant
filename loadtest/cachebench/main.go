@@ -61,7 +61,7 @@ func main() {
 
 	// Same key sequence for both modes: popularity follows a Zipf
 	// distribution, as catalog and timeline reads do (a few hot programs).
-	r := rand.New(rand.NewPCG(42, 42))
+	r := rand.New(rand.NewPCG(42, 42)) //nolint:gosec // deterministic benchmark key sequence
 	z := rand.NewZipf(r, *hot, 1, uint64(*items-1))
 	keys := make([]string, *reads)
 	for i := range keys {
