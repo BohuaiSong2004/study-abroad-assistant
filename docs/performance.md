@@ -7,9 +7,10 @@ code on this hardware, not a production deployment:
 - services in Docker Compose (`docker compose up --build`, internal gRPC over
   mutual TLS), DynamoDB Local (`amazon/dynamodb-local`, in memory) in Docker,
   k6 1.8 on the same machine
-- sections 1 and 3 to 6 re-measured at commit `b175ed9` on 23 November 2026;
-  section 2 and the parallel-apply comparison were measured at `54bb840` on
-  22 November (their code paths have not changed since)
+- sections 1 and 3 to 6 re-measured on 23 November 2026 with the services as
+  of commit `b175ed9` (unchanged through `8741090`); section 2 and the
+  parallel-apply comparison were measured at `54bb840` on 22 November (their
+  code paths have not changed since)
 
 **Not measured:** Amazon DAX or real DynamoDB (there is no AWS deployment), and
 real user traffic. "Cache" below is the in-process DAX-style read-through cache
@@ -102,9 +103,9 @@ the timeline reflects the change.
 
 | Scenario | Server p50 / p95 | Client p50 / p95 | Errors |
 | --- | --- | --- | --- |
-| 5 students (25 changes), low load | 38.1 / 79.2 ms | 63 / 77 ms | 0 |
-| 100 students at once (500 changes), three runs | 1.79–2.25 s / 4.28–4.85 s | 1.70–2.06 s / 2.85–3.92 s | 0 |
-| same burst, commit `54bb840`, same day | 2.76 / 5.54 s | 2.36 / 4.21 s | 0 |
+| 5 students (25 changes), low load, three runs | 38–72 / 79–99 ms | 63–69 / 77–123 ms | 0 |
+| 100 students at once (500 changes), three runs | 1.79–2.66 s / 4.28–4.97 s | 1.70–2.34 s / 2.85–3.92 s | 0 |
+| same burst, commit `54bb840`, same day, two runs | 2.25–2.76 s / 4.85–5.54 s | 2.06–2.36 s / 3.71–4.21 s | 0 |
 
 The burst rows are a 2-vCPU machine running k6, five services and DynamoDB
 Local while 100 clients poll every 50 ms: latency there is queueing. On 22
@@ -112,7 +113,8 @@ November `54bb840` measured 0.89 / 1.62 s client-side for this burst; the
 same build was much slower on the 23rd, which is why the current code is
 compared with it on the same day. Since then, sync handlers read the program
 projection with strong consistency and every replica tails its own outbox
-(cache coherence), and the current code is still faster than `54bb840` under the same burst on the same day.
+(cache coherence); under the same burst on the same day the two builds land
+in overlapping ranges, so these changes cost nothing measurable here.
 
 ### Parallel apply (same build, `CONSUMER_WORKERS` / `REPLAN_PARALLELISM`)
 
@@ -128,7 +130,7 @@ Before the change, the consumer applied one event at a time; see
 
 `loadtest/k6/fanout.js`: 300 students apply to the same program; a counselor
 moves its deadline; the script polls all 300 timelines until each shows the new
-date. **300/300 re-planned in 3.88 s and 3.68 s** (two runs on 23 November),
+date. **300/300 re-planned in 2.68 s and 3.35 s** (two runs on 23 November),
 including the time to poll 300 timelines per round. On 22 November the same
 test took 1.99 s and 2.25 s; see section 3 for the day-to-day difference.
 
@@ -136,9 +138,9 @@ test took 1.99 s and 2.25 s; see section 3 for the day-to-day difference.
 
 Accounts are created with argon2id (19 MiB memory, t = 2), with at most 4
 hashes in flight per applications replica. Sequential sign-ups through the
-gateway (`k6 run loadtest/k6/signups.js`): **19–20.5 per second** in three runs
-on 23 November (24–26 on 22 November, before each sign-up also updated the
-shared per-address limit in DynamoDB). A burst of 100 simultaneous
+gateway (`k6 run loadtest/k6/signups.js`): **18.1 and 18.5 per second** in two
+runs on 23 November, against 19–20.5 for `54bb840` on the same day; each
+sign-up now also updates the shared per-address limit in DynamoDB. A burst of 100 simultaneous
 sign-ups queues behind the hashing limit and some requests reach the gateway's
 5 s backend deadline (504) — by design, the service sheds load instead of
 running out of memory. The load tests therefore create accounts up front and
@@ -153,17 +155,20 @@ Docker stack; signed-in pages with a session cookie:
 
 | Page | Performance | Accessibility | Best practices | SEO | CLS |
 | --- | --- | --- | --- | --- | --- |
-| `/` | 99 | 100 | 100 | 100 | 0 |
-| `/programs.html` | 99 | 100 | 100 | 100 | 0 |
-| `/dashboard.html` (1 application) | 99 | 100 | 100 | 100 | 0.005 |
-| `/dashboard.html` (3 applications, first visit) | 99 | 100 | 100 | 100 | 0.082 |
-| `/application.html` | 99 | 100 | 100 | 100 | 0 |
-| `/dashboard.html`, Chinese | 97 | 100 | 100 | 100 | 0.005 |
-| `/application.html`, Chinese | 99 | 100 | 100 | 100 | 0 |
+| `/` | 100 | 100 | 100 | 100 | 0 |
+| `/programs.html` | 96 | 100 | 100 | 100 | 0 |
+| `/dashboard.html` (1 application) | 95 | 100 | 100 | 100 | 0.005 |
+| `/dashboard.html` (3 applications, first visit, two runs) | 88–94 | 100 | 100 | 100 | 0.108 |
+| `/application.html` | 98 | 100 | 100 | 100 | 0 |
+| `/dashboard.html`, Chinese | 97 | 100 | 100 | 100 | 0.009 |
+| `/application.html`, Chinese | 95 | 100 | 100 | 100 | 0 |
 
-Lighthouse starts with an empty profile, so the dashboard draws one
-placeholder card; a returning student's browser draws as many as they had
-last time, which avoids the remaining shift.
+Performance scores move by several points between runs on this VM
+(simulated throttling scales with available CPU). Lighthouse starts with an
+empty profile, so the dashboard draws one placeholder card: a first visit
+with three applications still shifts (0.108, as before). A returning
+student's browser draws as many placeholders as they had last time, which
+Lighthouse cannot show.
 
 The first run scored 76–86 on the signed-in pages (CLS up to 0.65) and found a
 colour-contrast failure; the fixes are in the

@@ -130,12 +130,12 @@ and raw numbers in [docs/performance.md](docs/performance.md).
 | Read mix throughput, 20 concurrent clients | 287 req/s | 1,277 req/s (4.4×) |
 | Cache hit ratio (timeline / catalog items) | — | 99% / 99% |
 
-Sync: a change is applied to the timeline in **38 ms median** (p95 79 ms) at
-low load; a burst of 100 students making 500 changes is fully synced with 0
-errors (client-observed p50 1.7–2.1 s on a VM where the previous build took
-2.4 s that day); a deadline change re-plans **300 timelines in ~3.8 s**.
-Lighthouse (mobile): performance 97–99, accessibility, best practices and SEO
-100 on every page, in English and Chinese.
+Sync: a change is applied to the timeline in **38–72 ms median** at low load
+(three runs); a burst of 100 students making 500 changes is fully synced with
+0 errors (client-observed p50 1.7–2.3 s, the same range as the previous build
+on the same day); a deadline change re-plans **300 timelines in 2.7–3.4 s**.
+Lighthouse (mobile): accessibility, best practices and SEO 100 on every page,
+in English and Chinese; performance 88–100 depending on page and run.
 
 ## Operations
 
