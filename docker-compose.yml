@@ -57,6 +57,8 @@ services:
       <<: *env
       GRPC_ADDR: ":9093"
       ADMIN_ADDR: ":9103"
+      CONSUMER_WORKERS: ${CONSUMER_WORKERS:-8}
+      REPLAN_PARALLELISM: ${REPLAN_PARALLELISM:-8}
     depends_on:
       catalog: { condition: service_healthy }
       applications: { condition: service_healthy }

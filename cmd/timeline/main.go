@@ -28,6 +28,7 @@ func main() {
 	ob := events.NewOutbox(b.DB.API, table, "timeline", b.Log)
 	store := timeline.NewStore(b.DB.API, b.DB.Raw, table, ob)
 	syncer := timeline.NewSyncer(store, catalogv1.NewCatalogServiceClient(catalogConn), b.Log)
+	syncer.ReplanParallelism = platform.EnvInt("REPLAN_PARALLELISM", 8)
 
 	leaseTTL := platform.EnvDuration("CONSUMER_LEASE_TTL", 0)
 	consumer := func(name, stream string, cc eventsv1.EventStreamServiceClient, h events.Handler) *events.Consumer {
