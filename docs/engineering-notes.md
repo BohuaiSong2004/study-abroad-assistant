@@ -181,3 +181,16 @@ frames took ~0.5 s against Chrome's ~30 ms on the 2-vCPU machine, and the
 test passed 8 of 8 runs with one worker against 6 of 8 with three. It was
 CPU starvation of three WebKit workers next to the stack. CI now runs each
 browser in its own job.
+
+## 14. A benchmark run against the wrong build
+
+Re-measuring performance, a same-day baseline of an older commit was built in
+a separate worktree under the same compose project name, which replaced the
+`waypoint-*` image tags; the current stack was then restarted without
+`--build`, so the next fan-out, sign-up and Lighthouse runs measured the old
+build (the "Chinese" Lighthouse pages were in fact English). It surfaced when
+a new CI check of the Chinese page variant failed locally. Those numbers were
+withdrawn in a follow-up commit, re-measured after checking the served pages
+for the current markup, and the old-build runs kept only as the baseline.
+Lesson applied: verify the running build before measuring, and give
+comparison stacks their own project name.

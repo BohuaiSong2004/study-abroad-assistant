@@ -16,6 +16,16 @@ changes a deadline, a document is ticked off, or a recommender submits a letter.
 > performance numbers below were measured against DynamoDB Local, not DAX. The
 > program catalog is fictional sample data.
 
+## Screenshots
+
+| Student dashboard | Application timeline |
+| --- | --- |
+| ![Dashboard with three applications, progress and the 30-day agenda](docs/screenshots/dashboard.png) | ![Generated timeline with overdue items, a recommendation letter and a custom milestone](docs/screenshots/application.png) |
+| **The same timeline in Chinese** | **Counselor catalog and sync monitor** |
+| ![Timeline rendered in Simplified Chinese](docs/screenshots/application-zh.png) | ![Program catalog with the timeline sync panel](docs/screenshots/counselor.png) |
+
+Landing page and phone layout: [landing](docs/screenshots/landing.png) · [mobile](docs/screenshots/mobile.png).
+
 ## What it does
 
 - **Programs catalog** — search by university, field, country and degree; each
