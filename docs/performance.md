@@ -23,3 +23,5 @@ Public and signed-in pages score highly on accessibility, best practices, and SE
 ## Tests and coverage
 
 The project includes extensive unit, integration, and end-to-end tests. Application-code coverage is about 84%. All suites run in CI.
+
+<!-- small wording note -->
