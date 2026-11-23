@@ -143,3 +143,5 @@ deploy/terraform/      AWS: DynamoDB, DAX, ECS Fargate, ALB, Cloud Map
 ## Known limitations
 
 - Program search filters the listing index in DynamoDB, which is fine for a catalog of a few thousand programs; a much larger catalog would use a search engine.
+
+<!-- minor clarity note -->
